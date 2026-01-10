@@ -4,6 +4,11 @@ require("dotenv").config({
   path: `.env.${process.env.NODE_ENV || "development"}`,
 });
 
+require("dotenv").config({
+  path: `.env.${process.env.NODE_ENV || "development"}.local`,
+  override: true,
+});
+
 module.exports = {
   serverConfig: {
     port: process.env.SERVER_PORT || 9000,
