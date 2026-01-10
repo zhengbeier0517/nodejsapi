@@ -1,4 +1,5 @@
 const User = require("../models/user");
+const cacheHelper = require("../common/cache/cacheHelper");
 const {
   EntityAlreadyExistsException,
   EntityNotFoundException,
@@ -72,15 +73,14 @@ const register = async (payload) => {
     password: hashedPassword,
     email: payload.email,
   });
-  const userData = {
-    id: newUser.id,
-    userName: newUser.userName,
-    email: newUser.email,
-  };
   return {
     isSuccess: true,
     message: "Registration successful",
-    data: userData,
+    data: {
+      id: newUser.id,
+      userName: newUser.userName,
+      email: newUser.email,
+    },
   };
 };
 
@@ -135,11 +135,31 @@ const login = async (payload) => {
   return {
     isSuccess: true,
     message: "Login successful",
-    data: token,
+    data: { token },
+  };
+};
+
+/**
+ * Logout
+ * @param {string} token
+ * @returns
+ */
+const logout = async (token) => {
+  const decoded = jwt.decode(token);
+  const ttl = decoded.exp * 1000 - Date.now();
+
+  if (ttl > 0) {
+    await cacheHelper.setAsync(token, true, ttl);
+  }
+
+  return {
+    isSuccess: true,
+    message: "Logout successful",
   };
 };
 
 module.exports = {
   register,
   login,
+  logout,
 };

@@ -28,7 +28,19 @@ const login = async (req, res) => {
   }
 };
 
+const logout = async (req, res) => {
+  const token = req.token;
+
+  const result = await authService.logout(token);
+  if (result.isSuccess) {
+    res.sendCommonValue(204, result.message);
+  } else {
+    res.sendCommonValue(401, result.message);
+  }
+};
+
 module.exports = {
   register,
   login,
+  logout,
 };

@@ -3,6 +3,7 @@ const router = express.Router();
 
 const { body } = require("express-validator");
 const { commonValidate } = require("../middleware/expressValidator");
+const { authenticate } = require("../middleware/authentication");
 
 const authController = require("../controller/authController");
 
@@ -98,6 +99,29 @@ router.post(
     body("password").notEmpty().withMessage("password is required").isLength({ min: 8 }).withMessage("password must be at least 8 characters"),
   ]),
   authController.login
+);
+
+/**
+ * @openapi
+ * /api/auth/logout:
+ *   post:
+ *     tags:
+ *       - Auth
+ *     summary: Logout
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       204:
+ *         description: No Content
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal Server Error
+ */
+router.post(
+  "/logout",
+  authenticate,
+  authController.logout
 );
 
 module.exports = router;
