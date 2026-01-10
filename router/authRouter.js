@@ -58,4 +58,46 @@ router.post(
   authController.register
 );
 
+/**
+ * @openapi
+ * /api/auth/login:
+ *   post:
+ *     tags:
+ *       - Auth
+ *     summary: Login
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userName
+ *               - password
+ *             properties:
+ *               userName:
+ *                 type: string
+ *                 default: johndoe
+ *               password:
+ *                 type: string
+ *                 default: 12345678
+ *     responses:
+ *       200:
+ *         description: OK
+ *       400:
+ *         description: Bad Request
+ *       404:
+ *         description: Not Found
+ *       500:
+ *         description: Internal Server Error
+ */
+router.post(
+  "/login",
+  commonValidate([
+    body("userName").notEmpty().withMessage("userName is required").matches(/^[a-zA-Z0-9_]+$/).withMessage("userName can only contain letters, numbers, and underscores"),
+    body("password").notEmpty().withMessage("password is required").isLength({ min: 8 }).withMessage("password must be at least 8 characters"),
+  ]),
+  authController.login
+);
+
 module.exports = router;

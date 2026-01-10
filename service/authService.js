@@ -1,10 +1,15 @@
 const User = require("../models/user");
 const {
   EntityAlreadyExistsException,
+  EntityNotFoundException,
   ValidationException,
 } = require("../common/commonError");
 const bcrypt = require("bcryptjs");
-const { bcryptConfig } = require("../appConfig");
+const jwt = require("jsonwebtoken");
+const {
+  bcryptConfig,
+  jwtConfig,
+} = require("../appConfig");
 
 /**
  * Check if userName already exists
@@ -53,31 +58,88 @@ const checkOtpValid = async (email, otp) => {
 
 /**
  * Register
- * @param {*} user
+ * @param {*} payload
  * @returns
  */
-const register = async (user) => {
-  await checkUserNameExists(user.userName);
-  const hashedPassword = await bcrypt.hash(user.password, bcryptConfig.saltRounds);
-  await checkEmailExists(user.email);
-  await checkOtpValid(user.email, user.otp);
+const register = async (payload) => {
+  await checkUserNameExists(payload.userName);
+  const hashedPassword = await bcrypt.hash(payload.password, bcryptConfig.saltRounds);
+  await checkEmailExists(payload.email);
+  await checkOtpValid(payload.email, payload.otp);
 
   const newUser = await User.create({
-    userName: user.userName,
+    userName: payload.userName,
     password: hashedPassword,
-    email: user.email,
+    email: payload.email,
   });
+  const userData = {
+    id: newUser.id,
+    userName: newUser.userName,
+    email: newUser.email,
+  };
   return {
     isSuccess: true,
     message: "Registration successful",
-    data: {
-      id: newUser.id,
-      userName: newUser.userName,
-      email: newUser.email,
+    data: userData,
+  };
+};
+
+/**
+ * Get user by userName
+ * @param {string} userName
+ * @returns
+ */
+const getByUserName = async (userName) => {
+  const user = await User.findOne({
+    where: { userName },
+    attributes: ["id", "password"],
+    raw: true,
+  });
+
+  if (!user) {
+    throw new EntityNotFoundException("Username not found");
+  }
+
+  return user;
+};
+
+/**
+ * Login
+ * @param {*} payload
+ * @returns
+ */
+const login = async (payload) => {
+  const user = await getByUserName(payload.userName);
+  const isPasswordMatch = await bcrypt.compare(payload.password, user.password);
+
+  if (!isPasswordMatch) {
+    return {
+      isSuccess: false,
+      message: "Invalid username or password",
+    };
+  }
+
+  const token = jwt.sign(
+    {
+      id: user.id,
     },
+    jwtConfig.secret,
+    {
+      audience: jwtConfig.audience,
+      issuer: jwtConfig.issuer,
+      algorithm: jwtConfig.algorithms[0],
+      expiresIn: jwtConfig.expiresIn,
+    },
+  );
+
+  return {
+    isSuccess: true,
+    message: "Login successful",
+    data: token,
   };
 };
 
 module.exports = {
   register,
+  login,
 };

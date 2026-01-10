@@ -15,6 +15,20 @@ const register = async (req, res) => {
   }
 };
 
+const login = async (req, res) => {
+  const user = {};
+  user.userName = req.body.userName;
+  user.password = req.body.password;
+
+  const result = await authService.login(user);
+  if (result.isSuccess) {
+    res.sendCommonValue(200, result.message, result.data);
+  } else {
+    res.sendCommonValue(400, result.message);
+  }
+};
+
 module.exports = {
   register,
+  login,
 };
