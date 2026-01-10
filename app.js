@@ -52,6 +52,10 @@ app.get("/", (req, res) => {
 const demorouter = require("./router/demorouter");
 app.use("/api/test", demorouter);
 
+// config authRouter
+const authRouter = require("./router/authRouter");
+app.use("/api/auth", authRouter);
+
 //config erorhandle
 const erorhandle = require("./middleware/errorhandling");
 app.use(erorhandle.errorhandling);
