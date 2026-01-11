@@ -1,5 +1,6 @@
 const { DataTypes } = require("sequelize");
 const { sequelize } = require("../db/sequelizedb");
+const {genderEnum}=require('../common/Enum/genderEnum');
 
 const User = sequelize.define(
   "User",
@@ -30,13 +31,8 @@ const User = sequelize.define(
     gender: {
       type: DataTypes.ENUM("Other", "Male", "Female"),
       get() {
-        const gender = this.getDataValue("gender");
-        const genderoNumber = {
-          Other: 0,
-          Male: 1,
-          Female: 2,
-        };
-        return genderoNumber[gender];
+        const gender = this.getDataValue("gender");       
+        return genderEnum[gender];
       },
     },
     age: {
