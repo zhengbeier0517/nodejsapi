@@ -52,6 +52,10 @@ app.get("/", (req, res) => {
 const demorouter = require("./router/demorouter");
 app.use("/api/test", demorouter);
 
+// config authRouter
+const authRouter = require("./router/authRouter");
+app.use("/api/auth", authRouter);
+
 // user router (login placeholder + basic profile CRUD)
 const userrouter = require("./router/userrouter");
 app.use("/api/users", userrouter);
