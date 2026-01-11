@@ -56,6 +56,10 @@ app.use("/api/test", demorouter);
 const authRouter = require("./router/authRouter");
 app.use("/api/auth", authRouter);
 
+// user router (login placeholder + basic profile CRUD)
+const userrouter = require("./router/userrouter");
+app.use("/api/users", userrouter);
+
 //config erorhandle
 const erorhandle = require("./middleware/errorhandling");
 app.use(erorhandle.errorhandling);
