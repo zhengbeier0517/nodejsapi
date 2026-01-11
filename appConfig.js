@@ -1,7 +1,11 @@
-const converHelper = require("./common/convertHelper");
+const converHelper = require('./common/convertHelper');
 
-require("dotenv").config({
-  path: `.env.${process.env.NODE_ENV || "development"}`,
+require('dotenv').config({
+  path: `.env.${process.env.NODE_ENV || 'development'}.local`,
+  override: true,
+});
+require('dotenv').config({
+  path: `.env.${process.env.NODE_ENV || 'development'}`,
 });
 
 require("dotenv").config({
