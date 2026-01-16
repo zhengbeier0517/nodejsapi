@@ -52,6 +52,10 @@ app.get("/", (req, res) => {
 const demorouter = require("./router/demorouter");
 app.use("/api/test", demorouter);
 
+// category routes
+const categoryRouter = require("./router/categoryRouter");
+app.use("/api/category", categoryRouter);
+
 // config authRouter
 const authRouter = require("./router/authRouter");
 app.use("/api/auth", authRouter);
