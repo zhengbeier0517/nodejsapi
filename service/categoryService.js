@@ -12,7 +12,7 @@ const buildTree = (rows, parentId = null) =>
       description: x.description,
       parentId: x.parentId,
       sortOrder: x.sortOrder,
-      status: x.status,
+      active: x.active,
       children: buildTree(rows, x.id),
     }));
 
@@ -39,7 +39,7 @@ const create = async (payload) => {
     description: payload.description,
     parentId: payload.parentId || null,
     sortOrder: payload.sortOrder ?? 0,
-    status: payload.status || 'Enabled',
+    active: payload.active ?? true,
   });
   return { isSuccess: true, data: created };
 };
@@ -54,7 +54,7 @@ const update = async (id, payload) => {
     description: payload.description ?? existing.description,
     parentId: payload.parentId ?? existing.parentId,
     sortOrder: payload.sortOrder ?? existing.sortOrder,
-    status: payload.status ?? existing.status,
+    active: payload.active ?? existing.active,
   });
   return { isSuccess: true, data: existing };
 };
@@ -68,10 +68,10 @@ const remove = async (id) => {
   return { isSuccess: true };
 };
 
-const toggleStatus = async (id, status) => {
+const toggleActive = async (id, active) => {
   const existing = await Category.findByPk(id);
   if (!existing) throw new UserFriendlyException('Category not found');
-  await existing.update({ status });
+  await existing.update({ active });
   return { isSuccess: true };
 };
 
@@ -87,6 +87,6 @@ module.exports = {
   create,
   update,
   remove,
-  toggleStatus,
+  toggleActive,
   updateSort,
 };
