@@ -13,7 +13,7 @@ router.post(
     body('name').notEmpty().withMessage('name is required'),
     body('parentId').optional({ nullable: true }).isInt({ min: 1 }).withMessage('parentId must be int'),
     body('sortOrder').optional().isInt(),
-    body('status').optional().isIn(['Enabled', 'Disabled']),
+    body('active').optional().isBoolean(),
   ]),
   categoryController.create
 );
@@ -25,7 +25,7 @@ router.put(
     body('name').optional().isString(),
     body('parentId').optional({ nullable: true }).isInt({ min: 1 }),
     body('sortOrder').optional().isInt(),
-    body('status').optional().isIn(['Enabled', 'Disabled']),
+    body('active').optional().isBoolean(),
   ]),
   categoryController.update
 );
@@ -33,12 +33,12 @@ router.put(
 router.delete('/:id', commonValidate([param('id').isInt({ min: 1 })]), categoryController.remove);
 
 router.patch(
-  '/:id/status',
+  '/:id/active',
   commonValidate([
     param('id').isInt({ min: 1 }),
-    body('status').isIn(['Enabled', 'Disabled']).withMessage('status must be Enabled or Disabled'),
+    body('active').isBoolean().withMessage('active must be boolean'),
   ]),
-  categoryController.toggleStatus
+  categoryController.toggleActive
 );
 
 router.patch(

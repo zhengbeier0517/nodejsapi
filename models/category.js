@@ -26,10 +26,10 @@ const Category = sequelize.define(
       allowNull: false,
       defaultValue: 0,
     },
-    status: {
-      type: DataTypes.ENUM('Enabled', 'Disabled'),
+    active: {
+      type: DataTypes.BOOLEAN,
       allowNull: false,
-      defaultValue: 'Enabled',
+      defaultValue: true,
     },
   },
   {

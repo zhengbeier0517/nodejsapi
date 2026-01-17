@@ -39,13 +39,13 @@ const remove = async (req, res) => {
   }
 };
 
-const toggleStatus = async (req, res) => {
+const toggleActive = async (req, res) => {
   try {
-    await categoryService.toggleStatus(parseInt(req.params.id), req.body.status);
+    await categoryService.toggleActive(parseInt(req.params.id), req.body.active);
     return ok(res);
   } catch (err) {
     if (err instanceof UserFriendlyException) return fail(res, err.message);
-    return fail(res, 'status update failed');
+    return fail(res, 'active update failed');
   }
 };
 
@@ -64,6 +64,6 @@ module.exports = {
   create,
   update,
   remove,
-  toggleStatus,
+  toggleActive,
   updateSort,
 };
