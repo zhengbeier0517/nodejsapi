@@ -3,6 +3,7 @@ var router = express.Router();
 
 const { body, param, query } = require("express-validator");
 const { commonValidate } = require("../middleware/expressValidator");
+const { authenticate } = require("../middleware/authentication");
 const usercontroller = require("../controller/usercontroller");
 
 /**
@@ -85,6 +86,7 @@ router.post(
  */
 router.post(
   "/",
+  authenticate,
   commonValidate([
     body("userName").notEmpty().withMessage("userName is required"),
     body("password").notEmpty().withMessage("password is required"),
@@ -127,6 +129,7 @@ router.post(
  */
 router.get(
   "/",
+  authenticate,
   commonValidate([
     query("page").optional().isInt({ min: 1 }).withMessage("page must be int"),
     query("pageSize")
@@ -160,6 +163,7 @@ router.get(
  */
 router.delete(
   "/:ids",
+  authenticate,
   commonValidate([
     param("ids")
       .notEmpty()
@@ -193,6 +197,7 @@ router.delete(
  */
 router.get(
   "/:idOrName",
+  authenticate,
   commonValidate([
     param("idOrName").notEmpty().withMessage("idOrName is required"),
   ]),
@@ -245,6 +250,7 @@ router.get(
  */
 router.put(
   "/:id",
+  authenticate,
   commonValidate([
     param("id").isInt({ min: 1 }).withMessage("id must be a positive integer"),
     body("userName").optional().isString().trim(),

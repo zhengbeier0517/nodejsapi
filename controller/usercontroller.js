@@ -1,15 +1,21 @@
 const userservice = require("../service/userservice");
+const authService = require("../service/authService");
 
 /**
  * for login (no implementation yet).
  */
-const loginAsync = async (req, res) => {
-  // To be implemented: validate credentials, compare password hash, issue JWT.
-  res.status(501).json({
-  code: 501,
-  message: "Login not implemented",
-  data: null,
-});cd
+const loginAsync = async (req, res, next) => {
+  try {
+    const { userName, password } = req.body;
+    const result = await authService.login({ userName, password });
+
+    if (result.isSuccess) {
+      return res.sendCommonValue(200, result.message, result.data);
+    }
+    return res.sendCommonValue(400, result.message);
+  } catch (err) {
+    next(err);
+  }
 };
 
 /**
