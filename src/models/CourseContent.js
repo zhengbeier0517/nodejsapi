@@ -7,15 +7,27 @@ const CourseContent = sequelize.define('CourseContent', {
     primaryKey: true,
     autoIncrement: true
   },
+  
+  courseId: {
+    type: DataTypes.INTEGER,
+    allowNull: false, 
+    comment: 'References Course table'
+  },
   title: {
     type: DataTypes.STRING,
     allowNull: false
   },
   content: {
-    type: DataTypes.TEXT
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  sortOrder: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0
   }
 }, {
-  tableName: 'course_contents'
+  tableName: 'course_contents',
+  timestamps: true
 });
 
 module.exports = CourseContent;
