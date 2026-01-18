@@ -56,11 +56,11 @@ app.use("/api/test", demorouter);
 const authRouter = require("./router/authRouter");
 app.use("/api/auth", authRouter);
 
-// user router (login placeholder + basic profile CRUD)
+// config userRouter
 const userRouter = require("./router/userRouter");
 app.use("/api/users", userRouter);
 
-// category routes
+// config categoryRouter
 const categoryRouter = require("./router/categoryRouter");
 app.use("/api/category", categoryRouter);
 

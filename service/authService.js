@@ -1,27 +1,27 @@
 const User = require("../models/user");
+const Role = require("../models/role");
+const UserRole = require("../models/userRole");
 const cacheHelper = require("../common/cache/cacheHelper");
 const {
   EntityAlreadyExistsException,
   EntityNotFoundException,
-  ValidationException,
 } = require("../common/commonError");
+const nodemailer = require("nodemailer");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const {
   bcryptConfig,
   jwtConfig,
 } = require("../appConfig");
-const { withSqliteForeignKeysOff } = require("sequelize/lib/dialects/sqlite/sqlite-utils");
 
 /**
- * Check if userName already exists
+ * Check if username already exists
  * @param {string} userName
  */
-const checkUserNameExists = async (userName) => {
+const checkUsernameExists = async (userName) => {
   const user = await User.findOne({
     where: { userName },
     attributes: ["id"],
-    raw: true,
   });
   if (user) {
     throw new EntityAlreadyExistsException("Username already exists");
@@ -36,7 +36,6 @@ const checkEmailExists = async (email) => {
   const user = await User.findOne({
     where: { email },
     attributes: ["id"],
-    raw: true,
   });
 
   if (user) {
@@ -45,17 +44,30 @@ const checkEmailExists = async (email) => {
 };
 
 /**
- * Check if otp is valid
+ * Verify email
  * @param {string} email
- * @param {string} otp
+ * @returns
  */
-const checkOtpValid = async (email, otp) => {
-  const validOtp = "123456";
-  console.log(`Sending OTP ${validOtp} to email ${email}...`);
+const verifyEmail = async (email) => {
+  const testAccount = await nodemailer.createTestAccount();
+  const transporter = nodemailer.createTransport({
+    host: testAccount.smtp.host,
+    port: testAccount.smtp.port,
+    secure: testAccount.smtp.secure,
+    auth: {
+      user: testAccount.user,
+      pass: testAccount.pass,
+    },
+  });
+  const info = await transporter.sendMail({
+    from: `"No Reply" <${testAccount.user}>`,
+    to: email,
+    subject: "Verify Email",
+    text: "Please verify your email address.",
+    html: "<p>Please verify your email address.</p>",
+  });
 
-  if (otp !== validOtp) {
-    throw new ValidationException("Wrong OTP");
-  }
+  return nodemailer.getTestMessageUrl(info);
 };
 
 /**
@@ -64,46 +76,67 @@ const checkOtpValid = async (email, otp) => {
  * @returns
  */
 const register = async (payload) => {
-  await checkUserNameExists(payload.userName);
-  const hashedPassword = await bcrypt.hash(payload.password, bcryptConfig.saltRounds);
+  await checkUsernameExists(payload.userName);
   await checkEmailExists(payload.email);
-  await checkOtpValid(payload.email, payload.otp);
+  const hashedPassword = await bcrypt.hash(payload.password, bcryptConfig.saltRounds);
 
   const newUser = await User.create({
-    userName: payload.userName,
-    password: hashedPassword,
     firstName: payload.firstName,
-    lastName:payload.lastName,
+    lastName: payload.lastName,
+    userName: payload.userName,
     email: payload.email,
+    password: hashedPassword,
   });
+  await UserRole.create({
+    userId: newUser.id,
+    roleId: 4,
+  });
+
+  const verifyEmailUrl = await verifyEmail(payload.email);
+
   return {
     isSuccess: true,
     message: "Registration successful",
     data: {
       id: newUser.id,
+      firstName: newUser.firstName,
+      lastName: newUser.lastName,
       userName: newUser.userName,
       email: newUser.email,
+      roles: ["student"],
+      verifyEmailUrl,
     },
   };
 };
 
 /**
- * Get user by userName
+ * Get user by username
  * @param {string} userName
  * @returns
  */
-const getByUserName = async (userName) => {
+const getByUsername = async (userName) => {
   const user = await User.findOne({
     where: { userName },
     attributes: ["id", "password"],
-    raw: true,
+    include: [
+      {
+        model: Role,
+        as: "roles",
+        attributes: ["name"],
+        through: { attributes: [] },
+      },
+    ],
   });
 
   if (!user) {
     throw new EntityNotFoundException("Username not found");
   }
 
-  return user;
+  return {
+    id: user.id,
+    password: user.password,
+    roles: user.roles.map((role) => role.name),
+  };
 };
 
 /**
@@ -112,7 +145,7 @@ const getByUserName = async (userName) => {
  * @returns
  */
 const login = async (payload) => {
-  const user = await getByUserName(payload.userName);
+  const user = await getByUsername(payload.userName);
   const isPasswordMatch = await bcrypt.compare(payload.password, user.password);
 
   if (!isPasswordMatch) {
@@ -125,6 +158,7 @@ const login = async (payload) => {
   const token = jwt.sign(
     {
       id: user.id,
+      roles: user.roles,
     },
     jwtConfig.secret,
     {
