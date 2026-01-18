@@ -11,6 +11,7 @@ const {
   bcryptConfig,
   jwtConfig,
 } = require("../appConfig");
+const { withSqliteForeignKeysOff } = require("sequelize/lib/dialects/sqlite/sqlite-utils");
 
 /**
  * Check if userName already exists
@@ -71,6 +72,8 @@ const register = async (payload) => {
   const newUser = await User.create({
     userName: payload.userName,
     password: hashedPassword,
+    firstName: payload.firstName,
+    lastName:payload.lastName,
     email: payload.email,
   });
   return {

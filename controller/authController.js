@@ -7,6 +7,10 @@ const register = async (req, res) => {
   user.email = req.body.email;
   user.otp = req.body.otp;
 
+  
+  user.firstName = req.body.firstName;
+  user.lastName = req.body.lastName;
+
   const result = await authService.register(user);
   if (result.isSuccess) {
     res.sendCommonValue(201, result.message, result.data);
@@ -14,6 +18,7 @@ const register = async (req, res) => {
     res.sendCommonValue(400, result.message);
   }
 };
+
 
 const login = async (req, res) => {
   const user = {};
