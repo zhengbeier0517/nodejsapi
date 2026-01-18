@@ -60,6 +60,11 @@ app.use("/api/auth", authRouter);
 const categoryRouter = require("./router/categoryRouter");
 app.use("/api/category", categoryRouter);
 
+
+// user router (login placeholder + basic profile CRUD)
+const userRouter = require("./router/userRouter");
+app.use("/api/users", userRouter);
+
 //config erorhandle
 const erorhandle = require("./middleware/errorhandling");
 app.use(erorhandle.errorhandling);
