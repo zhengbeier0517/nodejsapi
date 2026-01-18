@@ -52,6 +52,18 @@ app.get("/", (req, res) => {
 const demorouter = require("./router/demorouter");
 app.use("/api/test", demorouter);
 
+// config authRouter
+const authRouter = require("./router/authRouter");
+app.use("/api/auth", authRouter);
+
+// config userRouter
+const userRouter = require("./router/userRouter");
+app.use("/api/users", userRouter);
+
+// config categoryRouter
+const categoryRouter = require("./router/categoryRouter");
+app.use("/api/category", categoryRouter);
+
 //config erorhandle
 const erorhandle = require("./middleware/errorhandling");
 app.use(erorhandle.errorhandling);
