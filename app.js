@@ -60,13 +60,10 @@ app.use("/api/auth", authRouter);
 const categoryRouter = require("./router/categoryRouter");
 app.use("/api/category", categoryRouter);
 
-// config authRouter
-const authRouter = require("./router/authRouter");
-app.use("/api/auth", authRouter);
 
 // user router (login placeholder + basic profile CRUD)
-const userrouter = require("./router/userrouter");
-app.use("/api/users", userrouter);
+const userRouter = require("./router/userRouter");
+app.use("/api/users", userRouter);
 
 //config erorhandle
 const erorhandle = require("./middleware/errorhandling");

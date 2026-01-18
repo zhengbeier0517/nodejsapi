@@ -1,4 +1,4 @@
-const userservice = require("../service/userservice");
+const userservice = require("../service/userService");
 const authService = require("../service/authService");
 
 /**

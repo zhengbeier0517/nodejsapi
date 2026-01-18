@@ -4,7 +4,7 @@ var router = express.Router();
 const { body, param, query } = require("express-validator");
 const { commonValidate } = require("../middleware/expressValidator");
 const { authenticate } = require("../middleware/authentication");
-const usercontroller = require("../controller/usercontroller");
+const usercontroller = require("../controller/userController");
 
 /**
  * @openapi
