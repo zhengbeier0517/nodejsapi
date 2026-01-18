@@ -1,29 +1,32 @@
-"use strict";
+const { DataTypes } = require('sequelize');
 
-const { DataTypes } = require("sequelize");
-const { sequelize } = require("../db/sequelizedb");
+const { sequelize } = require('../db/sequelizedb');
 
 const UserRole = sequelize.define(
-  "UserRole",
-  {
-    userId: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      primaryKey: true,
+    'UserRole',
+    {
+        userId: {
+            type: DataTypes.INTEGER,
+            primaryKey: true,
+            allowNull: false,
+            field: 'userId',
+        },
+        roleId: {
+            type: DataTypes.INTEGER,
+            primaryKey: true,
+            allowNull: false,
+            field: 'roleId',
+        },
     },
-    roleId: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      primaryKey: true,
-    },
-  },
-  {
-    tableName: "UserRole",
-    timestamps: false,
-    indexes: [
-      { unique: true, fields: ["userId", "roleId"] }, // 联合唯一
-    ],
-  }
+    {
+        tableName: 'UserRole',
+        timestamps: false,
+    }
 );
+
+// UserRole.associate = function (models) {
+//     UserRole.belongsTo(models.User, { foreignKey: 'userId' });
+//     UserRole.belongsTo(models.Role, { foreignKey: 'roleId' });
+// };
 
 module.exports = UserRole;

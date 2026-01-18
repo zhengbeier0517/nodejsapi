@@ -1,11 +1,11 @@
 const { db } = require("../db/mysqldb.js");
-const logger = require("../common/logsetting.js");
+const logger = require("../common/logsetting");
 const { User, Role, UserRole, Menu, RoleMenu } = require("../models/index.js");
 const {
   EntityAlreadyExistsException,
   EntityNotFoundException,
   UserFriendlyException,
-} = require("../common/commonError.js");
+} = require("../common/commonError");
 
 const getUserbyNameAsync = async (name) => {
   let sql = "SELECT * FROM User where username=? ";

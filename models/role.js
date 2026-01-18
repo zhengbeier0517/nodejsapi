@@ -1,6 +1,5 @@
-"use strict";
-
 const { DataTypes } = require("sequelize");
+
 const { sequelize } = require("../db/sequelizedb");
 
 const Role = sequelize.define(
@@ -10,31 +9,37 @@ const Role = sequelize.define(
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
-      allowNull: false,
     },
-    name: {
-      type: DataTypes.ENUM("super admin", "admin", "teacher", "student"),
-      allowNull: false,
+    roleName: {
+      type: DataTypes.STRING(50),
       unique: true,
+      allowNull: false,
+      field: "roleName",
+    },
+    mark: {
+      type: DataTypes.STRING(200),
+      allowNull: true,
     },
   },
   {
     tableName: "Role",
-    timestamps: false,
+    timestamps: true,
+    createdAt: "createdAt",
+    updatedAt: "updatedAt",
   }
 );
 
 Role.associate = (models) => {
   Role.belongsToMany(models.User, {
     foreignKey: "roleId",
-    through: models.UserRole,
+    through: "UserRole",
     as: "users",
   });
 
-  Role.belongsToMany(models.Permission, {
+  Role.belongsToMany(models.Menu, {
     foreignKey: "roleId",
-    through: models.RolePermission,
-    as: "permissions",
+    through: "RoleMenu",
+    as: "menus",
   });
 };
 
