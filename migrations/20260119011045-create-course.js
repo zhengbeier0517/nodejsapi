@@ -5,9 +5,10 @@ module.exports = {
   async up(queryInterface, Sequelize) {
     await queryInterface.createTable('Course', {
       id: {
-        autoIncrement: true,
-        primaryKey: true,
         type: Sequelize.INTEGER,
+        primaryKey: true,
+        autoIncrement: true,
+        allowNull: false,
       },
       title: {
         type: Sequelize.STRING(255),
@@ -24,68 +25,50 @@ module.exports = {
       categoryId: {
         type: Sequelize.INTEGER,
         allowNull: true,
-        // FK constraint added later when Category table exists
+        references: {
+          model: 'Category',
+          key: 'id',
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'SET NULL',
       },
       teacherId: {
         type: Sequelize.INTEGER,
         allowNull: true,
-        // FK constraint added later when Auth is ready
-      },
-      price: {
-        type: Sequelize.DECIMAL(10, 2),
-        allowNull: false,
-        defaultValue: 0.0,
+        references: {
+          model: 'User',
+          key: 'id',
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'SET NULL',
       },
       status: {
         type: Sequelize.ENUM('draft', 'published', 'archived'),
         allowNull: false,
         defaultValue: 'draft',
       },
-      level: {
-        type: Sequelize.ENUM('beginner', 'intermediate', 'advanced'),
-        allowNull: true,
-      },
-      duration: {
-        type: Sequelize.INTEGER,
-        allowNull: true,
-        comment: 'Total duration in minutes',
-      },
       active: {
         type: Sequelize.BOOLEAN,
         allowNull: false,
         defaultValue: true,
       },
-      // Placeholder fields for future modules
-      totalChapters: {
-        type: Sequelize.INTEGER,
-        allowNull: true,
-        defaultValue: 0,
-      },
-      enrollmentCount: {
-        type: Sequelize.INTEGER,
-        allowNull: true,
-        defaultValue: 0,
-      },
       createdAt: {
-        type: Sequelize.DATE,
         allowNull: false,
+        type: Sequelize.DATE,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),
       },
       updatedAt: {
-        type: Sequelize.DATE,
         allowNull: false,
+        type: Sequelize.DATE,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),
       },
     });
 
-    // Add index for common queries
-    await queryInterface.addIndex('Course', ['status']);
     await queryInterface.addIndex('Course', ['categoryId']);
     await queryInterface.addIndex('Course', ['teacherId']);
-    await queryInterface.addIndex('Course', ['active']);
   },
 
-  async down(queryInterface, Sequelize) {
+  async down(queryInterface) {
     await queryInterface.dropTable('Course');
   },
 };

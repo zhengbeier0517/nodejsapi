@@ -30,49 +30,26 @@ const Course = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: true,
     },
-    price: {
-      type: DataTypes.DECIMAL(10, 2),
-      allowNull: false,
-      defaultValue: 0.0,
-    },
     status: {
       type: DataTypes.ENUM('draft', 'published', 'archived'),
       allowNull: false,
       defaultValue: 'draft',
-    },
-    level: {
-      type: DataTypes.ENUM('beginner', 'intermediate', 'advanced'),
-      allowNull: true,
-    },
-    duration: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-      comment: 'Total duration in minutes',
     },
     active: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: true,
     },
-    totalChapters: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-      defaultValue: 0,
-    },
-    enrollmentCount: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-      defaultValue: 0,
-    },
   },
   {
     timestamps: true,
     tableName: 'Course',
-  }
+  },
 );
 
-// Associations can be added here when related models are ready
-// Course.belongsTo(models.Category, { foreignKey: 'categoryId', as: 'category' });
-// Course.belongsTo(models.User, { foreignKey: 'teacherId', as: 'teacher' });
+Course.associate = (models) => {
+  Course.belongsTo(models.Category, { foreignKey: 'categoryId', as: 'category' });
+  Course.belongsTo(models.User, { foreignKey: 'teacherId', as: 'teacher' });
+}
 
 module.exports = Course;

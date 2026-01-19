@@ -98,6 +98,11 @@ User.associate = (models) => {
     foreignKey: "userId",
     as: "teacherProfile",
   });
+
+  User.hasMany(models.Course, {
+    foreignKey: "teacherId",
+    as: "coursesAsTeacher",
+  });
 };
 
 module.exports = User;

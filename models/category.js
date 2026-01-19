@@ -41,6 +41,7 @@ const Category = sequelize.define(
 Category.associate = function (models) {
   Category.belongsTo(models.Category, { foreignKey: 'parentId', as: 'parent' });
   Category.hasMany(models.Category, { foreignKey: 'parentId', as: 'children' });
+  Category.hasMany(models.Course, { foreignKey: 'categoryId', as: 'courses' });
 };
 
 module.exports = Category;
