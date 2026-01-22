@@ -63,8 +63,7 @@ const verifyEmail = async (email) => {
     from: `"No Reply" <${testAccount.user}>`,
     to: email,
     subject: "Verify Email",
-    text: "Please verify your email address.",
-    html: "<p>Please verify your email address.</p>",
+    html: `<a href="#">Click here to verify your email address</a>`,
   });
 
   return nodemailer.getTestMessageUrl(info);
