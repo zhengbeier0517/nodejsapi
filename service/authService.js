@@ -63,8 +63,7 @@ const verifyEmail = async (email) => {
     from: `"No Reply" <${testAccount.user}>`,
     to: email,
     subject: "Verify Email",
-    text: "Please verify your email address.",
-    html: "<p>Please verify your email address.</p>",
+    html: `<a href="#">Click here to verify your email address</a>`,
   });
 
   return nodemailer.getTestMessageUrl(info);
@@ -140,6 +139,48 @@ const getByUsername = async (userName) => {
 };
 
 /**
+ * Sign access token
+ * @param {*} user
+ * @returns
+ */
+const signAccessToken = (user) => {
+  return jwt.sign(
+    {
+      id: user.id,
+      roles: user.roles,
+    },
+    jwtConfig.accessSecret,
+    {
+      audience: jwtConfig.audience,
+      issuer: jwtConfig.issuer,
+      algorithm: jwtConfig.algorithms[0],
+      expiresIn: jwtConfig.accessExpiresIn,
+    }
+  );
+};
+
+/**
+ * Sign refresh token
+ * @param {*} user
+ * @returns
+ */
+const signRefreshToken = (user) => {
+  return jwt.sign(
+    {
+      id: user.id,
+      roles: user.roles,
+    },
+    jwtConfig.refreshSecret,
+    {
+      audience: jwtConfig.audience,
+      issuer: jwtConfig.issuer,
+      algorithm: jwtConfig.algorithms[0],
+      expiresIn: jwtConfig.refreshExpiresIn,
+    }
+  );
+};
+
+/**
  * Login
  * @param {*} payload
  * @returns
@@ -155,38 +196,99 @@ const login = async (payload) => {
     };
   }
 
-  const token = jwt.sign(
-    {
-      id: user.id,
-      roles: user.roles,
-    },
-    jwtConfig.secret,
-    {
-      audience: jwtConfig.audience,
-      issuer: jwtConfig.issuer,
-      algorithm: jwtConfig.algorithms[0],
-      expiresIn: jwtConfig.expiresIn,
-    },
-  );
+  const accessToken = signAccessToken(user);
+  const refreshToken = signRefreshToken(user);
 
   return {
     isSuccess: true,
     message: "Login successful",
-    data: { token },
+    data: {
+      accessToken,
+      refreshToken,
+    },
   };
 };
 
 /**
- * Logout
- * @param {string} token
+ * Refresh
+ * @param {string} refreshToken
  * @returns
  */
-const logout = async (token) => {
+const refresh = async (refreshToken) => {
+  // Check if refresh token exists
+  if (!refreshToken) {
+    return {
+      isSuccess: false,
+      message: "Refresh token is required",
+    };
+  }
+
+  // Check if refresh token is blacklisted
+  const isBlacklisted = await cacheHelper.hasAsync(refreshToken);
+  if (isBlacklisted) {
+    return {
+      isSuccess: false,
+      message: "Refresh token is blacklisted",
+    };
+  }
+
+  // Check if refresh token is valid
+  try {
+    const decoded = jwt.verify(
+      refreshToken,
+      jwtConfig.refreshSecret,
+      {
+        audience: jwtConfig.audience,
+        issuer: jwtConfig.issuer,
+        algorithms: jwtConfig.algorithms,
+      }
+    );
+    const user = {
+      id: decoded.id,
+      roles: decoded.roles,
+    };
+    const newAccessToken = signAccessToken(user);
+
+    return {
+      isSuccess: true,
+      message: "",
+      data: {
+        accessToken: newAccessToken,
+        refreshToken,
+      },
+    };
+  } catch {
+    return {
+      isSuccess: false,
+      message: "Refresh token is invalid or expired",
+    };
+  }
+};
+
+/**
+ * Decode token
+ * @param {string} token
+ */
+const decodeToken = async (token) => {
   const decoded = jwt.decode(token);
   const ttl = decoded.exp * 1000 - Date.now();
 
   if (ttl > 0) {
     await cacheHelper.setAsync(token, true, ttl);
+  }
+};
+
+/**
+ * Logout
+ * @param {string} accessToken
+ * @param {string} refreshToken
+ * @returns
+ */
+const logout = async (accessToken, refreshToken) => {
+  await decodeToken(accessToken);
+
+  if (refreshToken) {
+    await decodeToken(refreshToken);
   }
 
   return {
@@ -198,5 +300,6 @@ const logout = async (token) => {
 module.exports = {
   register,
   login,
+  refresh,
   logout,
 };
