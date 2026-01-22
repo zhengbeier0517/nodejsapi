@@ -29,10 +29,22 @@ const login = async (req, res) => {
   }
 };
 
-const logout = async (req, res) => {
-  const token = req.token;
+const refresh = async (req, res) => {
+  const refreshToken = req.body.refreshToken;
 
-  const result = await authService.logout(token);
+  const result = await authService.refresh(refreshToken);
+  if (result.isSuccess) {
+    res.sendCommonValue(200, result.message, result.data);
+  } else {
+    res.sendCommonValue(401, result.message);
+  }
+};
+
+const logout = async (req, res) => {
+  const accessToken = req.token;
+  const refreshToken = req.body?.refreshToken || "";
+
+  const result = await authService.logout(accessToken, refreshToken);
   if (result.isSuccess) {
     res.sendCommonValue(204, result.message);
   } else {
@@ -43,5 +55,6 @@ const logout = async (req, res) => {
 module.exports = {
   register,
   login,
+  refresh,
   logout,
 };
