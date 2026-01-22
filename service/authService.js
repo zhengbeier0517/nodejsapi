@@ -77,12 +77,7 @@ const verifyEmail = async (email) => {
 const register = async (payload) => {
   await checkUsernameExists(payload.userName);
   await checkEmailExists(payload.email);
-
-  try {
-    const hashedPassword = await bcrypt.hash(payload.password, bcryptConfig.saltRounds);
-  } catch {
-    throw new Error("Password hashing failed");
-  }
+  const hashedPassword = await bcrypt.hash(payload.password, bcryptConfig.saltRounds);
 
   const newUser = await User.create({
     firstName: payload.firstName,
@@ -96,11 +91,7 @@ const register = async (payload) => {
     roleId: 4,
   });
 
-  try {
-    const verifyEmailUrl = await verifyEmail(payload.email);
-  } catch {
-    throw new Error("Email verification failed");
-  }
+  const verifyEmailUrl = await verifyEmail(payload.email);
 
   return {
     isSuccess: true,
@@ -196,12 +187,7 @@ const signRefreshToken = (user) => {
  */
 const login = async (payload) => {
   const user = await getByUsername(payload.userName);
-
-  try {
-    const isPasswordMatch = await bcrypt.compare(payload.password, user.password);
-  } catch {
-    throw new Error("Password comparison failed");
-  }
+  const isPasswordMatch = await bcrypt.compare(payload.password, user.password);
 
   if (!isPasswordMatch) {
     return {
@@ -299,23 +285,16 @@ const decodeToken = async (token) => {
  * @returns
  */
 const logout = async (accessToken, refreshToken) => {
-  try {
-    await decodeToken(accessToken);
+  await decodeToken(accessToken);
 
-    if (refreshToken) {
-      await decodeToken(refreshToken);
-    }
-
-    return {
-      isSuccess: true,
-      message: "Logout successful",
-    };
-  } catch {
-    return {
-      isSuccess: false,
-      message: "Logout failed",
-    };
+  if (refreshToken) {
+    await decodeToken(refreshToken);
   }
+
+  return {
+    isSuccess: true,
+    message: "Logout successful",
+  };
 };
 
 module.exports = {
