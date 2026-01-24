@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const controller = require('../controllers/courseContentController');
+const controller = require('../controller/courseContentController'); // 确认文件夹名是 controller 还是 controllers
 
 /**
  * @swagger
@@ -25,9 +25,9 @@ const controller = require('../controllers/courseContentController');
  * description: Class ID
  * responses:
  * 200:
- * description: 
+ * description: Success
  * 401:
- * description: 
+ * description: Unauthorized
  */
 router.get('/list', controller.getContents);
 
