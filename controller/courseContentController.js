@@ -1,4 +1,4 @@
-const service = require('../services/courseContentService');
+const service = require('../service/courseContentService'); // 这里去掉了 's'
 
 exports.getContents = async (req, res) => {
   try {

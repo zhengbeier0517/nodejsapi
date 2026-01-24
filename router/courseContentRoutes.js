@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const controller = require('../controller/courseContentController'); // 确认文件夹名是 controller 还是 controllers
+const controller = require('../controller/courseContentController');
 
 /**
  * @swagger
@@ -12,14 +12,15 @@ const controller = require('../controller/courseContentController'); // 确认�
 /**
  * @swagger
  * /api/course-contents/list:
- * get:
- * summary: Get Content List
+ *   get:  
+ *     summary: Get Content List    
  * tags: [CourseContents]
  * security:
- * - bearerAuth: []
- * parameters:
- * - in: query
+ * - BearerAuth: []
+ *     parameters:
+ *       - in: query
  * name: courseId
+ * required: true
  * schema:
  * type: integer
  * description: Class ID
