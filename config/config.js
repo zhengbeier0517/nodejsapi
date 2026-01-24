@@ -1,12 +1,10 @@
-const { mysqlConfig } = require('../appConfig');
 
 module.exports = {
   development: {
-    host: mysqlConfig.host,
-    port: mysqlConfig.port,
-    username: mysqlConfig.user,
-    password: mysqlConfig.password,
-    database: mysqlConfig.database,
-    dialect: 'mysql'
+    username: "root", 
+    password: "123456", 
+    database: "mooc_db",
+    host: "127.0.0.1",
+    dialect: "mysql"
   }
 };

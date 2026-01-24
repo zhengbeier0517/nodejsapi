@@ -7,7 +7,6 @@ const CourseContent = sequelize.define('CourseContent', {
     primaryKey: true,
     autoIncrement: true
   },
-  
   courseId: {
     type: DataTypes.INTEGER,
     allowNull: false, 
@@ -27,6 +26,7 @@ const CourseContent = sequelize.define('CourseContent', {
   }
 }, {
   tableName: 'course_contents',
+  freezeTableName: true, 
   timestamps: true
 });
 

@@ -1,46 +1,35 @@
 require('dotenv').config();
 const { Sequelize } = require('sequelize');
 
+
 const sequelize = new Sequelize(
-  process.env.DB_NAME,
-  process.env.DB_USER,
-  process.env.DB_PASS,
+  process.env.DB_NAME || 'mooc_db',
+  process.env.DB_USER || 'root',
+  process.env.DB_PASS || '123456', 
   {
+    host: '127.0.0.1',  
     dialect: 'mysql',
     logging: false,
-    dialectOptions: {
-      socketPath: '/tmp/mysql.sock'
+    pool: {
+      max: 5,
+      min: 0,
+      acquire: 30000,
+      idle: 10000
     }
   }
 );
 
 sequelize.authenticate()
   .then(() => {
-    console.log('✅ Database connected!');
-    return sequelize.sync({ alter: true });
+    console.log('✅ Database connected via TCP (127.0.0.1)!');
+   
+    return sequelize.sync({ alter: true }); 
   })
   .then(() => {
     console.log('✅ Models synchronized!');
   })
   .catch(err => {
-    const altSequelize = new Sequelize(
-      process.env.DB_NAME,
-      process.env.DB_USER,
-      process.env.DB_PASS,
-      {
-        dialect: 'mysql',
-        logging: false,
-        dialectOptions: {
-          socketPath: '/tmp/mysql.sock.lock'
-        }
-      }
-    );
-    return altSequelize.authenticate()
-      .then(() => {
-        console.log('✅ Connected via alternative socket!');
-        return altSequelize.sync({ alter: true });
-      });
-  })
-  .catch(err => console.error('❌ Connection error:', err));
+    console.error('❌ Connection error. Please check if MySQL is running and .env is correct:', err.message);
+  });
 
 module.exports = sequelize;
