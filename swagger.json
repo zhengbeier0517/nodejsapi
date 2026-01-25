@@ -1,0 +1,36 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Mooc API Documentation",
+    "version": "1.0.0"
+  },
+  "basePath": "/",
+  "securityDefinitions": {
+    "bearerAuth": {
+      "type": "apiKey",
+      "name": "Authorization",
+      "in": "header",
+      "description": "Input format: Bearer <your_token>"
+    }
+  },
+  "paths": {
+    "/api/course-contents/list": {
+      "get": {
+        "summary": "Get a list of course content",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "courseId",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "description": "Class ID"
+          }
+        ],
+        "responses": {
+          "200": { "description": "Successfully returned data" }
+        }
+      }
+    }
+  }
+}

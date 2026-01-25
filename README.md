@@ -1,4 +1,10 @@
 # Change Log
+## 2026-01-22
+### Changed
+Changed token into access token + refresh token.
+- .env.development
+- .env.production
+- appConfig.js
 ## 2026-01-19
 ### Changed
 - controller/

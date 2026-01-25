@@ -108,6 +108,41 @@ router.post(
 
 /**
  * @openapi
+ * /api/auth/refresh:
+ *   post:
+ *     tags:
+ *       - Auth
+ *     summary: Refresh
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - refreshToken
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *                 default: REFRESH_TOKEN
+ *     responses:
+ *       200:
+ *         description: OK
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal Server Error
+ */
+router.post(
+  "/refresh",
+  commonValidate([
+    body("refreshToken").notEmpty().withMessage("Refresh token is required"),
+  ]),
+  authController.refresh
+);
+
+/**
+ * @openapi
  * /api/auth/logout:
  *   post:
  *     tags:
@@ -115,6 +150,16 @@ router.post(
  *     summary: Logout
  *     security:
  *       - BearerAuth: []
+ *     requestBody:
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *                 default: REFRESH_TOKEN
  *     responses:
  *       204:
  *         description: No Content

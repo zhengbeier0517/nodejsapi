@@ -32,7 +32,7 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // config Swagger
-const swaggerDocument = require("./common/swagger");
+const swaggerDocument = require("./swagger.json");
 const swaggerUi = require("swagger-ui-express");
 // config'/api-docs'  Path to access Swagger UI
 const swaggerUiOptions = {
@@ -63,6 +63,9 @@ app.use("/api/users", userRouter);
 // config categoryRouter
 const categoryRouter = require("./router/categoryRouter");
 app.use("/api/category", categoryRouter);
+
+const courseContentRouter = require("./router/courseContentRoutes");
+app.use("/api/course-contents", courseContentRouter);
 
 //config erorhandle
 const erorhandle = require("./middleware/errorhandling");
