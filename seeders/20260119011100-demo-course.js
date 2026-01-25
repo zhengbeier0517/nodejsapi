@@ -3,6 +3,16 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
+    // Check if courses already exist
+    const [existingCourses] = await queryInterface.sequelize.query(
+      "SELECT COUNT(*) as count FROM Course"
+    );
+
+    if (existingCourses[0].count > 0) {
+      console.log('Courses already exist, skipping...');
+      return;
+    }
+
     const courses = [
       {
         title: 'Introduction to JavaScript',

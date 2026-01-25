@@ -3,32 +3,28 @@ const router = express.Router();
 const controller = require('../controller/courseContentController');
 
 /**
- * @swagger
- * tags:
- * name: CourseContents
- * description: Course Content Management
- */
-
-/**
- * @swagger
+ * @openapi
  * /api/course-contents/list:
- *   get:  
- *     summary: Get Content List    
- * tags: [CourseContents]
- * security:
- * - BearerAuth: []
+ *   get:
+ *     tags:
+ *       - Course Contents
+ *     summary: Get course content list
+ *     security:
+ *       - BearerAuth: []
  *     parameters:
- *       - in: query
- * name: courseId
- * required: true
- * schema:
- * type: integer
- * description: Class ID
- * responses:
- * 200:
- * description: Success
- * 401:
- * description: Unauthorized
+ *       - name: courseId
+ *         in: query
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Course ID
+ *     responses:
+ *       200:
+ *         description: Content list returned successfully
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal Server Error
  */
 router.get('/list', controller.getContents);
 

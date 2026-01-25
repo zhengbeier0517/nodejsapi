@@ -31,8 +31,8 @@ app.use(returnvalue.returnvalue);
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// config Swagger
-const swaggerDocument = require("./swagger.json");
+// config Swagger (Dynamic - auto-generates from JSDoc comments in routes)
+const swaggerSpec = require("./common/swagger");
 const swaggerUi = require("swagger-ui-express");
 // config'/api-docs'  Path to access Swagger UI
 const swaggerUiOptions = {
@@ -41,7 +41,7 @@ const swaggerUiOptions = {
 app.use(
   "/api-docs",
   swaggerUi.serve,
-  swaggerUi.setup(swaggerDocument, swaggerUiOptions)
+  swaggerUi.setup(swaggerSpec, swaggerUiOptions)
 );
 
 app.get("/", (req, res) => {
