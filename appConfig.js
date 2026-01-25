@@ -4,6 +4,11 @@ require("dotenv").config({
   path: `.env.${process.env.NODE_ENV || "development"}`,
 });
 
+require("dotenv").config({
+  path: `.env.${process.env.NODE_ENV || "development"}.local`,
+  override: true,
+});
+
 module.exports = {
   serverConfig: {
     port: process.env.SERVER_PORT || 9000,
@@ -15,11 +20,13 @@ module.exports = {
     saltRounds: Number(process.env.SALT_ROUNDS),
   },
   jwtConfig: {
-    secret: process.env.JWT_SECRET,
+    accessSecret: process.env.JWT_ACCESS_SECRET,
+    refreshSecret: process.env.JWT_REFRESH_SECRET,
     audience: process.env.JWT_AUDIENCE,
     issuer: process.env.JWT_ISSUER,
     algorithms: [process.env.JWT_ALGORITHMS],
-    expiresIn: process.env.JWT_EXPIRES_IN,
+    accessExpiresIn: process.env.JWT_ACCESS_EXPIRES_IN,
+    refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN,
   },
   mysqlConfig: {
     host: process.env.MYSQL_HOST,

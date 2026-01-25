@@ -2,43 +2,39 @@
 
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
-  async up(queryInterface, Sequelize) {
-
+  async up(queryInterface) {
+    const now = new Date();
     await queryInterface.bulkInsert(
       "User",
       [
         {
-          username: "user1",
+          userName: "admin",
+          firstName: "Admin",
+          lastName: "User",
+          email: "admin@example.com",
           password:
-            "$2b$10$ig9HBJNu6OgmwSnbPn/jWupbPPq1LC4Ee5uptADcG/Ho3M1e3VM1S",
-          email: "user1@example.com",
-          age: 30,
-          gender: "Other",
+            "$2b$10$DKBYkPG9userv3D9NjHKU.lE4PqcAl2k7TkGbk0FmLv1xX8XnoTl.",
+          createdAt: now,
+          updatedAt: now,
         },
         {
-          username: "admin",
+          userName: "teacher",
+          firstName: "Teacher",
+          lastName: "One",
+          email: "teacher@example.com",
           password:
-            "$2b$10$ig9HBJNu6OgmwSnbPn/jWupbPPq1LC4Ee5uptADcG/Ho3M1e3VM1S",
-          email: "admin@example.com",
-          age: 31,
-          gender: "Other",
+            "$2b$10$pcfza0ZHoIv7fpEmkiV16uZwflkl/y0Qfq11O9LlG2ro49Obu3LIe",
+          createdAt: now,
+          updatedAt: now,
         },
       ],
       {}
     );
   },
 
-  async down(queryInterface, Sequelize) {
-    /**
-     * Add commands to revert seed here.
-     *
-     * Example:
-     * await queryInterface.bulkDelete('People', null, {});
-     */
-
-    //  await queryInterface.bulkDelete("user", null, {});
-    await queryInterface.bulkDelete("User", null, {});
-    // delete table if necessary   to use reset-db command in package.json
-    await queryInterface.dropTable("User");
+  async down(queryInterface) {
+    await queryInterface.bulkDelete("User", {
+      userName: ["admin", "teacher"],
+    });
   },
 };

@@ -31,8 +31,8 @@ app.use(returnvalue.returnvalue);
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// config Swagger
-const swaggerDocument = require("./common/swagger");
+// config Swagger (generated from JSDoc in routers)
+const swaggerSpec = require("./common/swagger");
 const swaggerUi = require("swagger-ui-express");
 // config'/api-docs'  Path to access Swagger UI
 const swaggerUiOptions = {
@@ -41,7 +41,7 @@ const swaggerUiOptions = {
 app.use(
   "/api-docs",
   swaggerUi.serve,
-  swaggerUi.setup(swaggerDocument, swaggerUiOptions)
+  swaggerUi.setup(swaggerSpec, swaggerUiOptions)
 );
 
 app.get("/", (req, res) => {
@@ -52,10 +52,21 @@ app.get("/", (req, res) => {
 const demorouter = require("./router/demorouter");
 app.use("/api/test", demorouter);
 
-// category routes
+// config authRouter
+const authRouter = require("./router/authRouter");
+app.use("/api/auth", authRouter);
+
+// config userRouter
+const userRouter = require("./router/userrouter");
+app.use("/api/users", userRouter);
+
+// config categoryRouter
 const categoryRouter = require("./router/categoryRouter");
 app.use("/api/category", categoryRouter);
 
+// config courseContentRouter
+const courseContentRouter = require("./router/courseContentRoutes");
+app.use("/api/course-contents", courseContentRouter);
 //config erorhandle
 const erorhandle = require("./middleware/errorhandling");
 app.use(erorhandle.errorhandling);
