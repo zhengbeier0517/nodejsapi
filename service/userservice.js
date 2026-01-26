@@ -23,17 +23,46 @@ const getUserbyNameAsync = async (name) => {
 };
 
 const addUserAsync = async (user) => {
-  let sql =
-    "insert into User(username,password,email,address,age,gender) values (?,?,?,?,?,?)";
-  let result = await db.query(sql, [
-    user.userName,
-    user.password,
-    user.email,
-    user.address,
-    user.age,
-    user.gender,
-  ]);
-  return { isSuccess: true, message: "" };
+  const t = await User.sequelize.transaction();
+  try {
+    const roleName = user.role || "student";
+    const role = await Role.findOne({
+      where: { name: roleName },
+      transaction: t,
+      lock: t.LOCK.UPDATE,
+    });
+    if (!role) {
+      throw new EntityNotFoundException("role not found");
+    }
+
+    const newUser = await User.create(
+      {
+        userName: user.userName,
+        password: user.password,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        phone: user.phone,
+        address: user.address,
+        gender: user.gender,
+        dob: user.dob,
+        avatar: user.avatar,
+        bio: user.bio,
+      },
+      { transaction: t }
+    );
+
+    await UserRole.create(
+      { userId: newUser.id, roleId: role.id },
+      { transaction: t }
+    );
+
+    await t.commit();
+    return { isSuccess: true, message: "", data: { id: newUser.id } };
+  } catch (err) {
+    await t.rollback();
+    throw err;
+  }
 };
 
 const getUserListAsync = async (page, pageSize) => {
@@ -225,11 +254,18 @@ const buildMenuTree = (menus, parentMenu) => {
 const updateProfileAsync = async (id, user) => {
   if (user.gender !== undefined) {
     const genderMap = {
-      0: "Other",
-      1: "Male",
-      2: "Female",
+      0: "other",
+      1: "male",
+      2: "female",
     };
-    user.gender = genderMap[user.gender];
+    if (typeof user.gender === "number") {
+      user.gender = genderMap[user.gender];
+    }
+
+    const allowed = ["male", "female", "other", null];
+    if (!allowed.includes(user.gender)) {
+      throw new UserFriendlyException("Invalid gender value");
+    }
   }
 
   const [updatedUsers, affectedCount] = await User.update(user, {

@@ -32,7 +32,7 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // config Swagger
-const swaggerDocument = require("./swagger.json");
+const swaggerDocument = require("./common/swagger");
 const swaggerUi = require("swagger-ui-express");
 // config'/api-docs'  Path to access Swagger UI
 const swaggerUiOptions = {

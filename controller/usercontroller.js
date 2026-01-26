@@ -1,6 +1,9 @@
 const userservice = require("../service/userService");
 const authService = require("../service/authService");
 const { User, Role } = require("../models");
+const bcrypt = require("bcryptjs");
+const { bcryptConfig } = require("../appConfig");
+const saltRounds = bcryptConfig?.saltRounds || 10;
 
 const isAdmin = (req) => {
   const roles = req.user?.roles || [];
@@ -54,13 +57,25 @@ const addUserAsync = async (req, res, next) => {
       return res.sendCommonValue(403, "Only admin can create users");
     }
 
+    const roleName = req.body.role || "student";
+    // Admins in this system only manage students
+    if (roleName !== "student") {
+      return res.sendCommonValue(403, "Admin can only create students");
+    }
+
     const user = {
       userName: req.body.userName,
-      password: req.body.password,
+      password: await bcrypt.hash(req.body.password, saltRounds),
       email: req.body.email,
+      firstName: req.body.firstName,
+      lastName: req.body.lastName,
+      phone: req.body.phone,
       address: req.body.address,
-      age: req.body.age,
       gender: req.body.gender,
+      dob: req.body.dob,
+      avatar: req.body.avatar,
+      bio: req.body.bio,
+      role: roleName,
     };
     const result = await userservice.addUserAsync(user);
     if (result.isSuccess) {
@@ -171,12 +186,32 @@ const updateProfileAsync = async (req, res, next) => {
     const payload = {
       userName: req.body.userName,
       email: req.body.email,
+      password: req.body.password,
+      firstName: req.body.firstName,
+      lastName: req.body.lastName,
       phone: req.body.phone,
       address: req.body.address,
       gender: req.body.gender,
-      age: req.body.age,
+      dob: req.body.dob,
       avatar: req.body.avatar,
+      bio: req.body.bio,
     };
+
+    // strip undefined fields so we only update what was sent
+    Object.keys(payload).forEach((key) => {
+      if (payload[key] === undefined) {
+        delete payload[key];
+      }
+    });
+
+    if (payload.password) {
+      payload.password = await bcrypt.hash(payload.password, saltRounds);
+    }
+
+    if (Object.keys(payload).length === 0) {
+      return res.sendCommonValue(400, "no fields to update");
+    }
+
     const result = await userservice.updateProfileAsync(id, payload);
     if (result.isSuccess) {
       res.sendCommonValue(200, "success");

@@ -12,14 +12,15 @@ const options = {
     },
     components: {
       securitySchemes: {
-        BearerAuth: {
+        bearerAuth: {
           type: "http",
           scheme: "bearer",
           bearerFormat: "JWT",
-          value: "Bearer <JWT token here>",
+          description: "Use format: Bearer <token>",
         },
       },
     },
+    security: [{ bearerAuth: [] }],
   },
   apis: [path.join(process.cwd(), "router/*.js")],
 };

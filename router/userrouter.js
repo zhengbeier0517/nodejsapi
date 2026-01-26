@@ -53,7 +53,7 @@ router.post(
  *  post:
  *     tags:
  *     - Users
- *     summary: Create a new user
+ *     summary: Create a new user (assign a role)
  *     requestBody:
  *      required: true
  *      content:
@@ -64,6 +64,8 @@ router.post(
  *              - userName
  *              - password
  *              - email
+ *              - firstName
+ *              - lastName
  *            properties:
  *              userName:
  *                type: string
@@ -71,13 +73,27 @@ router.post(
  *                type: string
  *              email:
  *                type: string
+ *              firstName:
+ *                type: string
+ *              lastName:
+ *                type: string
  *              address:
  *                type: string
  *              gender:
  *                type: string
- *                enum: [Male, Female, Other]
- *              age:
- *                type: integer
+ *                enum: [male, female, other]
+ *              phone:
+ *                type: string
+ *              dob:
+ *                type: string
+ *                format: date
+ *              avatar:
+ *                type: string
+ *              bio:
+ *                type: string
+ *              role:
+ *                type: string
+ *                enum: [super admin, admin, teacher, student]
  *     responses:
  *      200:
  *        description: Created
@@ -89,16 +105,33 @@ router.post(
   authenticate,
   commonValidate([
     body("userName").notEmpty().withMessage("userName is required"),
-    body("password").notEmpty().withMessage("password is required"),
+    body("password")
+      .notEmpty()
+      .isLength({ min: 8 })
+      .withMessage("password must be at least 8 characters"),
     body("email").notEmpty().isEmail().withMessage("email invalid"),
+    body("firstName").notEmpty().withMessage("firstName is required"),
+    body("lastName").notEmpty().withMessage("lastName is required"),
     body("address").optional().isString().trim(),
     body("gender")
       .optional()
       .isString()
       .trim()
-      .isIn(["Male", "Female", "Other"])
-      .withMessage("gender must be one of: Male, Female, Other"),
-    body("age").optional().isInt({ min: 0 }).withMessage("age must be int"),
+      .isIn(["male", "female", "other"])
+      .withMessage("gender must be one of: male, female, other"),
+    body("phone")
+      .optional()
+      .matches(/^[0-9]+$/)
+      .withMessage("phone must be numeric"),
+    body("dob").optional().isISO8601().toDate().withMessage("dob must be date"),
+    body("avatar").optional().isString().trim(),
+    body("bio").optional().isString().trim(),
+    body("role")
+      .optional()
+      .isString()
+      .trim()
+      .isIn(["super admin", "admin", "teacher", "student"])
+      .withMessage("invalid role"),
   ]),
   usercontroller.addUserAsync
 );
@@ -210,8 +243,8 @@ router.get(
  *  put:
  *     tags:
  *     - Users
- *     summary: Update basic user information
- *     description: Update profile fields (not including password change).
+ *     summary: Update basic user information (with optional password change)
+ *     description: Update profile fields that exist on the User table.
  *     parameters:
  *      - name: id
  *        in: path
@@ -229,16 +262,25 @@ router.get(
  *                type: string
  *              email:
  *                type: string
+ *              password:
+ *                type: string
+ *              firstName:
+ *                type: string
+ *              lastName:
+ *                type: string
  *              phone:
  *                type: string
  *              address:
  *                type: string
  *              gender:
- *                type: integer
- *                description: 0=Other,1=Male,2=Female
- *              age:
- *                type: integer
+ *                type: string
+ *                enum: [male, female, other]
+ *              dob:
+ *                type: string
+ *                format: date
  *              avatar:
+ *                type: string
+ *              bio:
  *                type: string
  *     responses:
  *      200:
@@ -255,16 +297,31 @@ router.put(
     param("id").isInt({ min: 1 }).withMessage("id must be a positive integer"),
     body("userName").optional().isString().trim(),
     body("email").optional().isEmail().withMessage("email invalid"),
-    body("phone").optional().isString().trim(),
+    body("password")
+      .optional()
+      .isString()
+      .isLength({ min: 8 })
+      .withMessage("password must be at least 8 characters"),
+    body("firstName").optional().isString().trim(),
+    body("lastName").optional().isString().trim(),
+    body("phone")
+      .optional()
+      .matches(/^[0-9]+$/)
+      .withMessage("phone must be numeric"),
     body("address").optional().isString().trim(),
     body("gender")
       .optional()
       .isString()
       .trim()
-      .isIn(["Male", "Female", "Other"])
-      .withMessage("gender must be one of: Male, Female"),
-    body("age").optional().isInt({ min: 0 }).withMessage("age must be int"),
+      .isIn(["male", "female", "other"])
+      .withMessage("gender must be one of: male, female, other"),
+    body("dob")
+      .optional()
+      .isISO8601()
+      .toDate()
+      .withMessage("dob must be a valid date"),
     body("avatar").optional().isString().trim(),
+    body("bio").optional().isString().trim(),
   ]),
   usercontroller.updateProfileAsync
 );
