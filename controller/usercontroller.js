@@ -1,5 +1,4 @@
-const userservice = require("../service/userService");
-const authService = require("../service/authService");
+const userService = require("../service/userService");
 const { User, Role } = require("../models");
 const bcrypt = require("bcryptjs");
 const { bcryptConfig } = require("../appConfig");
@@ -32,23 +31,6 @@ const getTargetUserMeta = async (id) => {
 };
 
 /**
- * for login (no implementation yet).
- */
-const loginAsync = async (req, res, next) => {
-  try {
-    const { userName, password } = req.body;
-    const result = await authService.login({ userName, password });
-
-    if (result.isSuccess) {
-      return res.sendCommonValue(200, result.message, result.data);
-    }
-    return res.sendCommonValue(400, result.message);
-  } catch (err) {
-    next(err);
-  }
-};
-
-/**
  * Create a new user.
  */
 const addUserAsync = async (req, res, next) => {
@@ -77,7 +59,7 @@ const addUserAsync = async (req, res, next) => {
       bio: req.body.bio,
       role: roleName,
     };
-    const result = await userservice.addUserAsync(user);
+    const result = await userService.addUserAsync(user);
     if (result.isSuccess) {
       res.sendCommonValue(200, "success");
     } else {
@@ -118,8 +100,8 @@ const getProfileAsync = async (req, res, next) => {
     }
 
     const result = isNumericId
-      ? await userservice.getUserbyIdAsync(idOrName)
-      : await userservice.getUserbyNameAsync(idOrName);
+      ? await userService.getUserbyIdAsync(idOrName)
+      : await userService.getUserbyNameAsync(idOrName);
 
     res.sendCommonValue(200, "success", result.data);
   } catch (err) {
@@ -149,7 +131,7 @@ const delUserAsync = async (req, res, next) => {
       }
     }
 
-    const result = await userservice.delUserByIdAsync(ids);
+    const result = await userService.delUserByIdAsync(ids);
     if (result.isSuccess) {
       res.sendCommonValue(200, "success");
     } else {
@@ -212,7 +194,7 @@ const updateProfileAsync = async (req, res, next) => {
       return res.sendCommonValue(400, "no fields to update");
     }
 
-    const result = await userservice.updateProfileAsync(id, payload);
+    const result = await userService.updateProfileAsync(id, payload);
     if (result.isSuccess) {
       res.sendCommonValue(200, "success");
     } else {
@@ -234,7 +216,7 @@ const listAsync = async (req, res, next) => {
 
     const page = parseInt(req.query.page, 10) || 1;
     const pageSize = parseInt(req.query.pageSize, 10) || 10;
-    const result = await userservice.getUserListAsync(page, pageSize);
+    const result = await userService.getUserListAsync(page, pageSize);
     res.sendCommonValue(200, "success", result.data);
   } catch (err) {
     next(err);
@@ -242,7 +224,6 @@ const listAsync = async (req, res, next) => {
 };
 
 module.exports = {
-  loginAsync,
   addUserAsync,
   getProfileAsync,
   delUserAsync,
