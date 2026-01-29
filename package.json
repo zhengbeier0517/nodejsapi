@@ -5,8 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "reset-db": "sequelize-cli db:migrate:undo:all &&  sequelize-cli db:seed:undo:all  && sequelize-cli db:migrate && sequelize-cli db:seed:all",
-    "init-db": "sequelize-cli db:migrate && sequelize-cli db:seed:all",
+    "reset-db": "sequelize-cli db:seed:undo:all && sequelize-cli db:migrate:undo:all && sequelize-cli db:migrate && sequelize-cli db:seed:all",
+    "init-db": "sequelize-cli db:migrate",
+    "set-seed": "sequelize-cli db:seed:all",
     "dev": "nodemon server.js"
   },
   "keywords": [],
@@ -39,3 +40,4 @@
     "sequelize-cli": "^6.6.2"
   }
 }
+
