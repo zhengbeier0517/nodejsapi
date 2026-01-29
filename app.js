@@ -63,10 +63,6 @@ app.use("/api/users", userRouter);
 // config categoryRouter
 const categoryRouter = require("./router/categoryRouter");
 app.use("/api/category", categoryRouter);
-
-const courseContentRouter = require("./router/courseContentRoutes");
-app.use("/api/course-contents", courseContentRouter);
-
 //config erorhandle
 const erorhandle = require("./middleware/errorhandling");
 app.use(erorhandle.errorhandling);
