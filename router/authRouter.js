@@ -55,11 +55,11 @@ const authController = require("../controller/authController");
 router.post(
   "/register",
   commonValidate([
-    body("firstName").notEmpty().withMessage("First name is required").bail().isAlpha().withMessage("First name can only contain letters"),
-    body("lastName").notEmpty().withMessage("Last name is required").bail().isAlpha().withMessage("Last name can only contain letters"),
-    body("userName").notEmpty().withMessage("Username is required").bail().matches(/^[a-zA-Z0-9_]+$/).withMessage("Username can only contain letters, numbers, and underscores"),
-    body("email").notEmpty().withMessage("Email is required").bail().isEmail().withMessage("Email must be valid"),
-    body("password").notEmpty().withMessage("Password is required").bail().isLength({ min: 8 }).withMessage("Password must be at least 8 characters"),
+    body("firstName").notEmpty().withMessage("First name is required").bail().isLength({ max: 255 }).withMessage("First name must be at most 255 characters").bail().isAlpha().withMessage("First name can only contain letters"),
+    body("lastName").notEmpty().withMessage("Last name is required").bail().isLength({ max: 255 }).withMessage("Last name must be at most 255 characters").bail().isAlpha().withMessage("Last name can only contain letters"),
+    body("userName").notEmpty().withMessage("Username is required").bail().isLength({ max: 255 }).withMessage("Username must be at most 255 characters").bail().matches(/^[a-zA-Z0-9_]+$/).withMessage("Username can only contain letters, numbers, and underscores"),
+    body("email").notEmpty().withMessage("Email is required").bail().isLength({ max: 255 }).withMessage("Email must be at most 255 characters").bail().isEmail().withMessage("Email must be valid"),
+    body("password").notEmpty().withMessage("Password is required").bail().isLength({ min: 8 }).withMessage("Password must be at least 8 characters").bail().isLength({ max: 255 }).withMessage("Password must be at most 255 characters"),
   ]),
   authController.register
 );
