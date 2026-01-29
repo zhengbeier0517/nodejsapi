@@ -4,7 +4,48 @@ var router = express.Router();
 const { body, param, query } = require("express-validator");
 const { commonValidate } = require("../middleware/expressValidator");
 const { authenticate } = require("../middleware/authentication");
-const userController = require("../controller/userController");
+const usercontroller = require("../controller/userController");
+
+/**
+ * @openapi
+ * '/api/users/login':
+ *  post:
+ *     tags:
+ *     - Users
+ *     summary: User login (design only)
+ *     description: Validate credentials and issue JWT (implementation pending).
+ *     requestBody:
+ *      required: true
+ *      content:
+ *        application/json:
+ *           schema:
+ *            type: object
+ *            required:
+ *              - userName
+ *              - password
+ *            properties:
+ *              userName:
+ *                type: string
+ *              password:
+ *                type: string
+ *     responses:
+ *      200:
+ *        description: Login success (token returned)
+ *      400:
+ *        description: Bad Request
+ *      401:
+ *        description: Unauthorized
+ *      501:
+ *        description: Not implemented
+ */
+router.post(
+  "/login",
+  commonValidate([
+    body("userName").notEmpty().withMessage("userName is required"),
+    body("password").notEmpty().withMessage("password is required"),
+  ]),
+  usercontroller.loginAsync
+);
 
 /**
  * @openapi
@@ -12,7 +53,7 @@ const userController = require("../controller/userController");
  *  post:
  *     tags:
  *     - Users
- *     summary: Create a new user (assign a role)
+ *     summary: Create a new user
  *     requestBody:
  *      required: true
  *      content:
@@ -23,8 +64,6 @@ const userController = require("../controller/userController");
  *              - userName
  *              - password
  *              - email
- *              - firstName
- *              - lastName
  *            properties:
  *              userName:
  *                type: string
@@ -32,27 +71,13 @@ const userController = require("../controller/userController");
  *                type: string
  *              email:
  *                type: string
- *              firstName:
- *                type: string
- *              lastName:
- *                type: string
  *              address:
  *                type: string
  *              gender:
  *                type: string
- *                enum: [male, female, other]
- *              phone:
- *                type: string
- *              dob:
- *                type: string
- *                format: date
- *              avatar:
- *                type: string
- *              bio:
- *                type: string
- *              role:
- *                type: string
- *                enum: [super admin, admin, teacher, student]
+ *                enum: [Male, Female, Other]
+ *              age:
+ *                type: integer
  *     responses:
  *      200:
  *        description: Created
@@ -63,40 +88,19 @@ router.post(
   "/",
   authenticate,
   commonValidate([
-    body("userName").notEmpty().bail().withMessage("userName is required"),
-    body("password")
-      .notEmpty()
-      .bail()
-      .isLength({ min: 8 })
-      .withMessage("password must be at least 8 characters"),
-    body("email").notEmpty().bail().isEmail().withMessage("email invalid"),
-    body("firstName").notEmpty().bail().withMessage("firstName is required"),
-    body("lastName").notEmpty().bail().withMessage("lastName is required"),
-    body("address").optional().bail().isString().trim(),
+    body("userName").notEmpty().withMessage("userName is required"),
+    body("password").notEmpty().withMessage("password is required"),
+    body("email").notEmpty().isEmail().withMessage("email invalid"),
+    body("address").optional().isString().trim(),
     body("gender")
       .optional()
-      .bail()
       .isString()
       .trim()
-      .isIn(["male", "female", "other"])
-      .withMessage("gender must be one of: male, female, other"),
-    body("phone")
-      .optional()
-      .bail()
-      .matches(/^[0-9]+$/)
-      .withMessage("phone must be numeric"),
-    body("dob").optional().bail().isISO8601().toDate().withMessage("dob must be date"),
-    body("avatar").optional().bail().isString().trim(),
-    body("bio").optional().bail().isString().trim(),
-    body("role")
-      .optional()
-      .bail()
-      .isString()
-      .trim()
-      .isIn(["super admin", "admin", "teacher", "student"])
-      .withMessage("invalid role"),
+      .isIn(["Male", "Female", "Other"])
+      .withMessage("gender must be one of: Male, Female, Other"),
+    body("age").optional().isInt({ min: 0 }).withMessage("age must be int"),
   ]),
-  userController.addUserAsync
+  usercontroller.addUserAsync
 );
 
 /**
@@ -127,14 +131,13 @@ router.get(
   "/",
   authenticate,
   commonValidate([
-    query("page").optional().bail().isInt({ min: 1 }).withMessage("page must be int"),
+    query("page").optional().isInt({ min: 1 }).withMessage("page must be int"),
     query("pageSize")
       .optional()
-      .bail()
       .isInt({ min: 1 })
       .withMessage("pageSize must be int"),
   ]),
-  userController.listAsync
+  usercontroller.listAsync
 );
 
 /**
@@ -164,14 +167,13 @@ router.delete(
   commonValidate([
     param("ids")
       .notEmpty()
-      .bail()
       .custom(value => {
         const arr = value.split(",");
         return arr.every(id => Number.isInteger(+id));
       })
       .withMessage("ids must be comma-separated integers"),
   ]),
-  userController.delUserAsync
+  usercontroller.delUserAsync
 );
 
 /**
@@ -197,9 +199,9 @@ router.get(
   "/:idOrName",
   authenticate,
   commonValidate([
-    param("idOrName").notEmpty().bail().withMessage("idOrName is required"),
+    param("idOrName").notEmpty().withMessage("idOrName is required"),
   ]),
-  userController.getProfileAsync
+  usercontroller.getProfileAsync
 );
 
 /**
@@ -208,8 +210,8 @@ router.get(
  *  put:
  *     tags:
  *     - Users
- *     summary: Update basic user information (with optional password change)
- *     description: Update profile fields that exist on the User table.
+ *     summary: Update basic user information
+ *     description: Update profile fields (not including password change).
  *     parameters:
  *      - name: id
  *        in: path
@@ -227,25 +229,16 @@ router.get(
  *                type: string
  *              email:
  *                type: string
- *              password:
- *                type: string
- *              firstName:
- *                type: string
- *              lastName:
- *                type: string
  *              phone:
  *                type: string
  *              address:
  *                type: string
  *              gender:
- *                type: string
- *                enum: [male, female, other]
- *              dob:
- *                type: string
- *                format: date
+ *                type: integer
+ *                description: 0=Other,1=Male,2=Female
+ *              age:
+ *                type: integer
  *              avatar:
- *                type: string
- *              bio:
  *                type: string
  *     responses:
  *      200:
@@ -259,40 +252,21 @@ router.put(
   "/:id",
   authenticate,
   commonValidate([
-    param("id").isInt({ min: 1 }).bail().withMessage("id must be a positive integer"),
-    body("userName").optional().bail().isString().trim(),
-    body("email").optional().bail().isEmail().withMessage("email invalid"),
-    body("password")
-      .optional()
-      .bail()
-      .isString()
-      .isLength({ min: 8 })
-      .withMessage("password must be at least 8 characters"),
-    body("firstName").optional().bail().isString().trim(),
-    body("lastName").optional().bail().isString().trim(),
-    body("phone")
-      .optional()
-      .bail()
-      .matches(/^[0-9]+$/)
-      .withMessage("phone must be numeric"),
-    body("address").optional().bail().isString().trim(),
+    param("id").isInt({ min: 1 }).withMessage("id must be a positive integer"),
+    body("userName").optional().isString().trim(),
+    body("email").optional().isEmail().withMessage("email invalid"),
+    body("phone").optional().isString().trim(),
+    body("address").optional().isString().trim(),
     body("gender")
       .optional()
-      .bail()
       .isString()
       .trim()
-      .isIn(["male", "female", "other"])
-      .withMessage("gender must be one of: male, female, other"),
-    body("dob")
-      .optional()
-      .bail()
-      .isISO8601()
-      .toDate()
-      .withMessage("dob must be a valid date"),
-    body("avatar").optional().bail().isString().trim(),
-    body("bio").optional().bail().isString().trim(),
+      .isIn(["Male", "Female", "Other"])
+      .withMessage("gender must be one of: Male, Female"),
+    body("age").optional().isInt({ min: 0 }).withMessage("age must be int"),
+    body("avatar").optional().isString().trim(),
   ]),
-  userController.updateProfileAsync
+  usercontroller.updateProfileAsync
 );
 
 module.exports = router;

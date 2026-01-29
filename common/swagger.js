@@ -1,7 +1,6 @@
 const path = require("path");
 const swaggerDoc = require("swagger-jsdoc");
-
-// config swagger-jsdoc
+//config swagger-jsdoc
 const options = {
   definition: {
     openapi: "3.0.0",
@@ -12,17 +11,16 @@ const options = {
     },
     components: {
       securitySchemes: {
-        bearerAuth: {
+        BearerAuth: {
           type: "http",
           scheme: "bearer",
           bearerFormat: "JWT",
-          description: "Use format: Bearer <token>",
+          value: "Bearer <JWT token here>",
         },
       },
     },
-    security: [{ bearerAuth: [] }],
   },
-  apis: [path.join(process.cwd(), "router/*.js")],
+  apis: [path.join(__dirname, "../router/*.js")],
 };
 
 const swaggerSpec = swaggerDoc(options);
