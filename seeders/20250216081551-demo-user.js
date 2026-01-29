@@ -9,21 +9,21 @@ module.exports = {
         lastName: "Zhang",
         userName: "zhangsan",
         email: "zhangsan@example.com",
-        password: "zhangsan",
+        password: "$2b$10$O1wB2o0sv8iejTDCUx0ia.6TYH1sfV/eu.4dOemedyIOXbswba6Cu",
       },
       {
         firstName: "Si",
         lastName: "Li",
         userName: "lisi",
         email: "lisi@example.com",
-        password: "lisi",
+        password: "$2b$10$O1wB2o0sv8iejTDCUx0ia.6TYH1sfV/eu.4dOemedyIOXbswba6Cu",
       },
       {
         firstName: "Wu",
         lastName: "Wang",
         userName: "wangwu",
         email: "wangwu@example.com",
-        password: "wangwu",
+        password: "$2b$10$O1wB2o0sv8iejTDCUx0ia.6TYH1sfV/eu.4dOemedyIOXbswba6Cu",
       },
     ];
 
