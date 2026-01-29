@@ -14,8 +14,7 @@ module.exports = {
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.bulkDelete("Role", {
-      name: ["super admin", "admin", "teacher", "student"],
-    });
+    await queryInterface.bulkDelete("Role", null, {});
+    await queryInterface.dropTable("Role");
   },
 };
