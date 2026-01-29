@@ -19,6 +19,7 @@ const options = {
         },
       },
     },
+    security: [{ BearerAuth: [] }],
   },
   apis: [path.join(__dirname, "../router/*.js")],
 };
