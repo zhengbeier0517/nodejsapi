@@ -1,5 +1,3 @@
-const { db } = require("../db/mysqldb.js");
-const logger = require("../common/logsetting.js");
 const { User, Role, UserRole, Menu, RoleMenu } = require("../models/index.js");
 const {
   EntityAlreadyExistsException,
@@ -7,107 +5,157 @@ const {
   UserFriendlyException,
 } = require("../common/commonError.js");
 
-const getUserbyNameAsync = async (name) => {
-  let sql = "SELECT * FROM User where username=? ";
-  let result = await db.query(sql, [name]);
-  let user = { id: 0 };
-  if (result[0].length > 0) {
-    user.id = result[0][0].id;
-    user.userName = result[0][0].username;
-    user.password = result[0][0].password;
-    user.email = result[0][0].email;
-    user.age = result[0][0].age;
-    user.gender = result[0][0].gender;
-  }
-  return { isSuccess: user.id > 0, message: "", data: user };
-};
+const getUserbyNameAsync = async (userName) => {
+  const user = await User.findOne({
+    where: { userName },
+    attributes: [
+      "id",
+      "userName",
+      "email",
+      "password",
+      "firstName",
+      "lastName",
+      "phone",
+      "address",
+      "gender",
+      "dob",
+      "avatar",
+      "bio",
+      "createdAt",
+      "updatedAt",
+    ],
+    include: [
+      {
+        model: Role,
+        as: "roles",
+        attributes: ["name"],
+        through: { attributes: [] },
+      },
+    ],
+  });
 
-const addUserAsync = async (user) => {
-  let sql =
-    "insert into User(username,password,email,address,age,gender) values (?,?,?,?,?,?)";
-  let result = await db.query(sql, [
-    user.userName,
-    user.password,
-    user.email,
-    user.address,
-    user.age,
-    user.gender,
-  ]);
-  return { isSuccess: true, message: "" };
-};
-
-const getUserListAsync = async (page, pageSize) => {
-  let countSql = "SELECT count(*) total FROM User; ";
-  let resultCount = await db.query(countSql);
-  let total = resultCount[0][0].total;
-  if (total == 0) {
-    return { isSuccess: true, message: "", data: { items: [], total: 0 } };
-  }
-  let sql = "SELECT * FROM User limit ? offset ? ;";
-  let resultData = await db.query(sql, [pageSize, (page - 1) * pageSize]);
-
-  let userlist = [];
-  if (resultData[0].length > 0) {
-    resultData[0].forEach((element) => {
-      let user = { id: 0 };
-      user.id = element.id;
-      user.username = element.username;
-      //user.password = element.password;
-      user.email = element.email;
-      user.age = element.age;
-      user.gender = element.gender;
-      userlist.push(user);
-    });
-  }
   return {
-    isSuccess: true,
-    message: "",
-    data: { items: userlist, total: total },
+    isSuccess: !!user,
+    message: user ? "" : "user not found",
+    data: user,
   };
 };
 
+const addUserAsync = async (user) => {
+  const t = await User.sequelize.transaction();
+  try {
+    const roleName = user.role || "student";
+    const role = await Role.findOne({
+      where: { name: roleName },
+      transaction: t,
+      lock: t.LOCK.UPDATE,
+    });
+    if (!role) {
+      throw new EntityNotFoundException("role not found");
+    }
+
+    const newUser = await User.create(
+      {
+        userName: user.userName,
+        password: user.password,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        phone: user.phone,
+        address: user.address,
+        gender: user.gender,
+        dob: user.dob,
+        avatar: user.avatar,
+        bio: user.bio,
+      },
+      { transaction: t }
+    );
+
+    await UserRole.create(
+      { userId: newUser.id, roleId: role.id },
+      { transaction: t }
+    );
+
+    await t.commit();
+    return { isSuccess: true, message: "", data: { id: newUser.id } };
+  } catch (err) {
+    await t.rollback();
+    throw err;
+  }
+};
+
+const getUserListAsync = async (page, pageSize) => {
+  const offset = (page - 1) * pageSize;
+  const { count, rows } = await User.findAndCountAll({
+    limit: pageSize,
+    offset,
+    attributes: [
+      "id",
+      "userName",
+      "email",
+      "firstName",
+      "lastName",
+      "phone",
+      "address",
+      "gender",
+      "dob",
+      "avatar",
+      "bio",
+      "createdAt",
+      "updatedAt",
+    ],
+    include: [
+      {
+        model: Role,
+        as: "roles",
+        attributes: ["name"],
+        through: { attributes: [] },
+      },
+    ],
+    order: [["id", "ASC"]],
+  });
+
+  const items = rows.map((u) => ({
+    ...u.get({ plain: true }),
+    roles: u.roles?.map((r) => r.name) || [],
+  }));
+
+  return { isSuccess: true, message: "", data: { items, total: count } };
+};
+
 const delUserByIdAsync = async (idsString) => {
-  const ids = idsString.split(",").map((id) => parseInt(id));
-  let sql = "Delete FROM User where id in (?); ";
-  let reuslt = await db.query(sql, [ids]);
-  if (reuslt[0].affectedRows > 0) {
-    return { isSuccess: true, mesage: "" };
+  const ids = String(idsString || "")
+    .split(",")
+    .map((id) => parseInt(id.trim(), 10))
+    .filter((id) => Number.isInteger(id) && id > 0);
+
+  if (ids.length === 0) {
+    return { isSuccess: false, message: "no valid ids" };
   }
 
-  return { isSuccess: false, mesage: "" };
+  const deleted = await User.sequelize.transaction(async (t) => {
+    // clear role mappings explicitly (in case FK cascade differs across envs)
+    await UserRole.destroy({ where: { userId: ids }, transaction: t });
+    return User.destroy({ where: { id: ids }, transaction: t });
+  });
+
+  return { isSuccess: deleted > 0, message: "" };
 };
+
 
 const uptUserByIdAsync = async (user) => {
-  let sql =
-    "Update User set username=?,email=?,address=?,age=?,gender=? where id =?";
-  let result = await db.query(sql, [
-    user.username,
-    user.email,
-    user.address,
-    user.age,
-    user.gender,
-    user.id,
-  ]);
-  if (result[0].affectedRows > 0) {
-    return { isSuccess: true, mesage: "" };
-  }
-  return { isSuccess: false, mesage: "" };
+  const { id, ...payload } = user;
+  const [affected] = await User.update(payload, { where: { id } });
+  return { isSuccess: affected > 0, mesage: "" };
 };
 
-const checkUserNameAsync = async (uername, id) => {
-  let sql = "SELECT * FROM User where username=? ";
-  let result = await db.query(sql, [uername]);
-  let user = { id: 0 };
-  if (result[0].length > 0) {
-    user.id = result[0][0].id;
-    user.username = result[0][0].username;
-    user.password = result[0][0].password;
-    user.email = result[0][0].email;
-    user.age = result[0][0].age;
-    user.gender = result[0][0].gender;
-  }
+const checkUserNameAsync = async (userName, id) => {
+  const user = await User.findOne({
+    where: { userName },
+    attributes: ["id", "userName", "email"],
+  });
 
-  if (user.id > 0 && user.id !== id) {
+  if (user && user.id !== id) {
     throw new EntityAlreadyExistsException("username already exists");
   }
 
@@ -115,20 +163,33 @@ const checkUserNameAsync = async (uername, id) => {
 };
 
 const getUserbyIdAsync = async (id) => {
-  let sql = "SELECT * FROM User where id=? ";
-  let result = await db.query(sql, [id]);
-  let user = { id: 0 };
-  if (result[0].length > 0) {
-    user.id = result[0][0].id;
-    user.userName = result[0][0].userName;
-    //user.password = result[0][0].password;
-    user.email = result[0][0].email;
-    user.phone = result[0][0].phone;
-    user.age = result[0][0].age;
-    user.gender = result[0][0].gender;
-    user.avatar = result[0][0].avatar;
-  }
-  return { isSuccess: true, message: "", data: user };
+  const user = await User.findByPk(id, {
+    attributes: [
+      "id",
+      "userName",
+      "email",
+      "firstName",
+      "lastName",
+      "phone",
+      "address",
+      "gender",
+      "dob",
+      "avatar",
+      "bio",
+      "createdAt",
+      "updatedAt",
+    ],
+    include: [
+      {
+        model: Role,
+        as: "roles",
+        attributes: ["name"],
+        through: { attributes: [] },
+      },
+    ],
+  });
+
+  return { isSuccess: !!user, message: user ? "" : "user not found", data: user };
 };
 
 const getCurrentUserPermissListAsync = async (id) => {
@@ -225,16 +286,22 @@ const buildMenuTree = (menus, parentMenu) => {
 const updateProfileAsync = async (id, user) => {
   if (user.gender !== undefined) {
     const genderMap = {
-      0: "Other",
-      1: "Male",
-      2: "Female",
+      0: "other",
+      1: "male",
+      2: "female",
     };
-    user.gender = genderMap[user.gender];
+    if (typeof user.gender === "number") {
+      user.gender = genderMap[user.gender];
+    }
+
+    const allowed = ["male", "female", "other", null];
+    if (!allowed.includes(user.gender)) {
+      throw new UserFriendlyException("Invalid gender value");
+    }
   }
 
-  const [updatedUsers, affectedCount] = await User.update(user, {
+  const [affectedCount] = await User.update(user, {
     where: { id: id },
-    returning: true, // Return the updated record(s)
   });
 
   if (affectedCount === 0) {
