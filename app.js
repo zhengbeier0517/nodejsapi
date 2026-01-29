@@ -63,7 +63,6 @@ app.use("/api/users", userRouter);
 // config categoryRouter
 const categoryRouter = require("./router/categoryRouter");
 app.use("/api/category", categoryRouter);
-
 //config erorhandle
 const erorhandle = require("./middleware/errorhandling");
 app.use(erorhandle.errorhandling);
