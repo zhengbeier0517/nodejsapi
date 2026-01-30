@@ -19,7 +19,6 @@ const options = {
         },
       },
     },
-    security: [{ BearerAuth: [] }],
   },
   apis: [path.join(__dirname, "../router/*.js")],
 };
@@ -27,3 +26,4 @@ const options = {
 const swaggerSpec = swaggerDoc(options);
 
 module.exports = swaggerSpec;
+
