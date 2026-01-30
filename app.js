@@ -64,6 +64,10 @@ app.use("/api/users", userRouter);
 const categoryRouter = require("./router/categoryRouter");
 app.use("/api/category", categoryRouter);
 
+// config courseRouter
+const courseRouter = require('./router/courseRouter');
+app.use('/api/courses', courseRouter);
+
 // config courseContentRouter
 const courseContentRouter = require("./router/courseContentRoutes");
 app.use("/api/course-contents", courseContentRouter);

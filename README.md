@@ -1,4 +1,8 @@
 # Change Log
+## 2026-01-29
+### Added
+- Added authorization.js, upload.js files to middleware/
+- Added multer dependency to .package.json
 ## 2026-01-22
 ### Changed
 Changed token into access token + refresh token.
