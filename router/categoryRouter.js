@@ -1,6 +1,8 @@
 const express = require('express');
 const { body, param } = require('express-validator');
 const { commonValidate } = require('../middleware/expressValidator');
+const { authenticate } = require('../middleware/authentication');
+const { requireAdmin } = require('../middleware/authorization');
 const categoryController = require('../controller/categoryController');
 
 const router = express.Router();
@@ -12,11 +14,13 @@ const router = express.Router();
  *     tags:
  *       - Category
  *     summary: Get category tree
+ *     security:
+ *       - BearerAuth: []
  *     responses:
  *       200:
  *         description: Tree data
  */
-router.get('/tree', categoryController.getTree);
+router.get('/tree', authenticate, requireAdmin, categoryController.getTree);
 
 /**
  * @openapi
@@ -25,6 +29,8 @@ router.get('/tree', categoryController.getTree);
  *     tags:
  *       - Category
  *     summary: Create category
+ *     security:
+ *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -52,6 +58,8 @@ router.get('/tree', categoryController.getTree);
  */
 router.post(
   '/',
+  authenticate,
+  requireAdmin,
   commonValidate([
     body('name').notEmpty().withMessage('name is required'),
     body('parentId').optional({ nullable: true }).isInt({ min: 1 }).withMessage('parentId must be int'),
@@ -68,6 +76,8 @@ router.post(
  *     tags:
  *       - Category
  *     summary: Update category
+ *     security:
+ *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -100,6 +110,8 @@ router.post(
  */
 router.put(
   '/:id',
+  authenticate,
+  requireAdmin,
   commonValidate([
     param('id').isInt({ min: 1 }),
     body('name').optional().isString(),
@@ -117,6 +129,8 @@ router.put(
  *     tags:
  *       - Category
  *     summary: Delete category
+ *     security:
+ *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -129,7 +143,7 @@ router.put(
  *       400:
  *         description: Cannot delete (has children)
  */
-router.delete('/:id', commonValidate([param('id').isInt({ min: 1 })]), categoryController.remove);
+router.delete('/:id', authenticate, requireAdmin, commonValidate([param('id').isInt({ min: 1 })]), categoryController.remove);
 
 /**
  * @openapi
@@ -138,6 +152,8 @@ router.delete('/:id', commonValidate([param('id').isInt({ min: 1 })]), categoryC
  *     tags:
  *       - Category
  *     summary: Toggle active
+ *     security:
+ *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -162,6 +178,8 @@ router.delete('/:id', commonValidate([param('id').isInt({ min: 1 })]), categoryC
  */
 router.patch(
   '/:id/active',
+  authenticate,
+  requireAdmin,
   commonValidate([
     param('id').isInt({ min: 1 }),
     body('active').isBoolean().withMessage('active must be boolean'),
@@ -176,6 +194,8 @@ router.patch(
  *     tags:
  *       - Category
  *     summary: Update sort order
+ *     security:
+ *       - BearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -200,6 +220,8 @@ router.patch(
  */
 router.patch(
   '/:id/sort',
+  authenticate,
+  requireAdmin,
   commonValidate([
     param('id').isInt({ min: 1 }),
     body('sortOrder').isInt().withMessage('sortOrder required'),
