@@ -116,7 +116,7 @@ const register = async (payload) => {
 const getByUsername = async (userName) => {
   const user = await User.findOne({
     where: { userName },
-    attributes: ["id", "password"],
+    attributes: ["id", "firstName", "lastName", "password"],
     include: [
       {
         model: Role,
@@ -133,6 +133,8 @@ const getByUsername = async (userName) => {
 
   return {
     id: user.id,
+    firstName: user.firstName,
+    lastName: user.lastName,
     password: user.password,
     roles: user.roles.map((role) => role.name),
   };
@@ -147,6 +149,8 @@ const signAccessToken = (user) => {
   return jwt.sign(
     {
       id: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
       roles: user.roles,
     },
     jwtConfig.accessSecret,
@@ -168,6 +172,8 @@ const signRefreshToken = (user) => {
   return jwt.sign(
     {
       id: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
       roles: user.roles,
     },
     jwtConfig.refreshSecret,
@@ -203,6 +209,12 @@ const login = async (payload) => {
     isSuccess: true,
     message: "Login successful",
     data: {
+      user: {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        roles: user.roles,
+      },
       accessToken,
       refreshToken,
     },
@@ -210,66 +222,10 @@ const login = async (payload) => {
 };
 
 /**
- * Refresh
- * @param {string} refreshToken
- * @returns
- */
-const refresh = async (refreshToken) => {
-  // Check if refresh token exists
-  if (!refreshToken) {
-    return {
-      isSuccess: false,
-      message: "Refresh token is required",
-    };
-  }
-
-  // Check if refresh token is blacklisted
-  const isBlacklisted = await cacheHelper.hasAsync(refreshToken);
-  if (isBlacklisted) {
-    return {
-      isSuccess: false,
-      message: "Refresh token is blacklisted",
-    };
-  }
-
-  // Check if refresh token is valid
-  try {
-    const decoded = jwt.verify(
-      refreshToken,
-      jwtConfig.refreshSecret,
-      {
-        audience: jwtConfig.audience,
-        issuer: jwtConfig.issuer,
-        algorithms: jwtConfig.algorithms,
-      }
-    );
-    const user = {
-      id: decoded.id,
-      roles: decoded.roles,
-    };
-    const newAccessToken = signAccessToken(user);
-
-    return {
-      isSuccess: true,
-      message: "",
-      data: {
-        accessToken: newAccessToken,
-        refreshToken,
-      },
-    };
-  } catch {
-    return {
-      isSuccess: false,
-      message: "Refresh token is invalid or expired",
-    };
-  }
-};
-
-/**
- * Decode token
+ * Blacklist token
  * @param {string} token
  */
-const decodeToken = async (token) => {
+const blacklistToken = async (token) => {
   const decoded = jwt.decode(token);
   const ttl = decoded.exp * 1000 - Date.now();
 
@@ -279,17 +235,61 @@ const decodeToken = async (token) => {
 };
 
 /**
+ * Refresh
+ * @param {string} accessToken
+ * @param {string} refreshToken
+ * @returns
+ */
+const refresh = async (accessToken, refreshToken) => {
+  await blacklistToken(accessToken);
+
+  // Check if refresh token is valid
+  let decoded;
+  try {
+    decoded = jwt.verify(
+      refreshToken,
+      jwtConfig.refreshSecret,
+      {
+        audience: jwtConfig.audience,
+        issuer: jwtConfig.issuer,
+        algorithms: jwtConfig.algorithms,
+      }
+    );
+  } catch {
+    return {
+      isSuccess: false,
+      message: "Refresh token is invalid or expired",
+    };
+  }
+
+  const user = {
+    id: decoded.id,
+    firstName: decoded.firstName,
+    lastName: decoded.lastName,
+    roles: decoded.roles,
+  };
+  const newAccessToken = signAccessToken(user);
+
+  return {
+    isSuccess: true,
+    message: "Refresh successful",
+    data: {
+      user,
+      accessToken: newAccessToken,
+      refreshToken,
+    },
+  };
+};
+
+/**
  * Logout
  * @param {string} accessToken
  * @param {string} refreshToken
  * @returns
  */
 const logout = async (accessToken, refreshToken) => {
-  await decodeToken(accessToken);
-
-  if (refreshToken) {
-    await decodeToken(refreshToken);
-  }
+  await blacklistToken(accessToken);
+  await blacklistToken(refreshToken);
 
   return {
     isSuccess: true,

@@ -18,8 +18,9 @@ const authenticate = async (req, res, next) => {
   }
 
   // Check if token is valid
+  let decoded;
   try {
-    const decoded = jwt.verify(
+    decoded = jwt.verify(
       token,
       jwtConfig.accessSecret,
       {
@@ -28,14 +29,18 @@ const authenticate = async (req, res, next) => {
         algorithms: jwtConfig.algorithms,
       }
     );
-    req.user = {
-      id: decoded.id,
-      roles: decoded.roles,
-    };
-    req.token = token;
   } catch {
     return res.sendCommonValue(401, "Token is invalid or expired");
   }
+
+  // Attach user info and token to request object
+  req.user = {
+    id: decoded.id,
+    firstName: decoded.firstName,
+    lastName: decoded.lastName,
+    roles: decoded.roles,
+  };
+  req.token = token;
 
   return next();
 };

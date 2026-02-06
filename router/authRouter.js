@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 
-const { body, query } = require("express-validator");
+const { body } = require("express-validator");
 const { commonValidate } = require("../middleware/expressValidator");
 const { authenticate } = require("../middleware/authentication");
 
@@ -113,6 +113,8 @@ router.post(
  *     tags:
  *       - Auth
  *     summary: Refresh
+ *     security:
+ *       - BearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -135,6 +137,7 @@ router.post(
  */
 router.post(
   "/refresh",
+  authenticate,
   commonValidate([
     body("refreshToken").notEmpty().withMessage("Refresh token is required"),
   ]),
