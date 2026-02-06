@@ -8,5 +8,13 @@ module.exports = {
     password: mysqlConfig.password,
     database: mysqlConfig.database,
     dialect: 'mysql'
+  },
+  test: {
+    host: mysqlConfig.host,
+    port: mysqlConfig.port,
+    username: mysqlConfig.user,
+    password: mysqlConfig.password,
+    database: mysqlConfig.database,
+    dialect: 'mysql'
   }
 };
