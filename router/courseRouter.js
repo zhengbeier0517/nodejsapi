@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const { body, param, query } = require('express-validator');
 const { commonValidate } = require('../middleware/expressValidator');
-const { authenticate } = require('../middleware/authentication');
 const { requireAdmin } = require('../middleware/authorization');
 const upload = require('../middleware/upload');
 const courseController = require('../controller/courseController');
@@ -47,7 +46,6 @@ const courseController = require('../controller/courseController');
  */
 router.get(
   '/',
-  authenticate,
   commonValidate([
     query('page').optional().isInt({ min: 1 }),
     query('pageSize').optional().isInt({ min: 1 }),
@@ -82,7 +80,6 @@ router.get(
  */
 router.get(
   '/:id',
-  authenticate,
   commonValidate([
     param('id').isInt({ min: 1 })
   ]),
@@ -137,7 +134,6 @@ router.get(
  */
 router.post(
   '/',
-  authenticate,
   requireAdmin,
   commonValidate([
     body('title').notEmpty().trim().isLength({ max: 255 }),
@@ -207,7 +203,6 @@ router.post(
  */
 router.put(
   '/:id',
-  authenticate,
   requireAdmin,
   commonValidate([
     param('id').isInt({ min: 1 }),
@@ -247,7 +242,6 @@ router.put(
  */
 router.delete(
   '/:id',
-  authenticate,
   requireAdmin,
   commonValidate([
     param('id').isInt({ min: 1 })
@@ -289,7 +283,6 @@ router.delete(
  */
 router.post(
   '/:id/cover',
-  authenticate,
   requireAdmin,
   upload.single('coverImage'),
   courseController.uploadCover
