@@ -12,6 +12,8 @@ const userController = require("../controller/userController");
  *  post:
  *     tags:
  *     - Users
+ *     security:
+ *       - BearerAuth: []
  *     summary: Create a new user (assign a role)
  *     requestBody:
  *      required: true
@@ -105,6 +107,8 @@ router.post(
  *  get:
  *     tags:
  *     - Users
+ *     security:
+ *       - BearerAuth: []
  *     summary: List users (basic profile fields)
  *     parameters:
  *      - name: page
@@ -143,6 +147,8 @@ router.get(
  *  delete:
  *     tags:
  *     - Users
+ *     security:
+ *     - BearerAuth: []
  *     summary: Delete users by id list
  *     parameters:
  *      - name: ids
@@ -180,6 +186,8 @@ router.delete(
  *  get:
  *     tags:
  *     - Users
+ *     security:
+ *       - BearerAuth: []
  *     summary: Get user profile by id or userName
  *     parameters:
  *      - name: idOrName
@@ -208,6 +216,8 @@ router.get(
  *  put:
  *     tags:
  *     - Users
+ *     security:
+ *       - BearerAuth: []
  *     summary: Update basic user information (with optional password change)
  *     description: Update profile fields that exist on the User table.
  *     parameters:

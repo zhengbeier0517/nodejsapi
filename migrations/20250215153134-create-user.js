@@ -10,32 +10,32 @@ module.exports = {
         allowNull: false,
       },
       userName: {
-        type: Sequelize.STRING,
+        type: Sequelize.STRING(50),
         allowNull: false,
         unique: true,
       },
       email: {
-        type: Sequelize.STRING,
+        type: Sequelize.STRING(254),
         allowNull: false,
         unique: true,
       },
       password: {
-        type: Sequelize.STRING,
+        type: Sequelize.STRING(255),
         allowNull: false,
       },
       firstName: {
-        type: Sequelize.STRING,
+        type: Sequelize.STRING(50),
         allowNull: false,
       },
       lastName: {
-        type: Sequelize.STRING,
+        type: Sequelize.STRING(50),
         allowNull: false,
       },
       phone: {
-        type: Sequelize.STRING,
+        type: Sequelize.STRING(20),
       },
       address: {
-        type: Sequelize.STRING,
+        type: Sequelize.STRING(255),
       },
       gender: {
         type: Sequelize.ENUM("male", "female", "other"),
@@ -44,10 +44,10 @@ module.exports = {
         type: Sequelize.DATEONLY,
       },
       avatar: {
-        type: Sequelize.STRING,
+        type: Sequelize.STRING(2048),
       },
       bio: {
-        type: Sequelize.STRING,
+        type: Sequelize.STRING(500),
       },
       createdAt: {
         type: Sequelize.DATE,

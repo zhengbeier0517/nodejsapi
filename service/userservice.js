@@ -192,96 +192,6 @@ const getUserbyIdAsync = async (id) => {
   return { isSuccess: !!user, message: user ? "" : "user not found", data: user };
 };
 
-const getCurrentUserPermissListAsync = async (id) => {
-  const user = await User.findByPk(id, {
-    include: [
-      {
-        model: Role,
-        as: "roles",
-      },
-    ],
-  });
-
-  if (!user) {
-    throw new EntityNotFoundException("user not found");
-  }
-
-  if (user.roles && user.roles.length > 0) {
-    const roleIds = user.roles.map((role) => role.id);
-    const menus = await RoleMenu.findAll({
-      where: {
-        roleId: roleIds,
-      },
-      include: [
-        {
-          model: Menu,
-          as: "menus",
-        },
-      ],
-    });
-    let menusList = [];
-    if (menus && menus.length > 0) {
-      menusList = menus.map((menu) => ({
-        id: menu.menus.id,
-        title: menu.menus.title,
-        permission:
-          menu.menus.permission == undefined || menu.menus.permission == null
-            ? ""
-            : menu.menus.permission,
-        parentId: menu.menus.parentId,
-        route: menu.menus.route,
-        componentPath: menu.menus.componentPath,
-        orderNum: menu.menus.orderNum,
-        httpUrl: menu.menus.httpUrl,
-        httpMethod: menu.menus.httpMethod,
-        children: [],
-      }));
-    }
-
-    let rootMenuTree = [];
-    menusList.forEach((menu) => {
-      if (
-        menu.parentId == 0 ||
-        menu.parentId == null ||
-        menu.parentId == undefined
-      ) {
-        if (!rootMenuTree.some((x) => x.id == menu.id)) {
-          rootMenuTree.push({
-            id: menu.id,
-            title: menu.title,
-            parentId: menu.parentId,
-            route: menu.route,
-            componentPath: menu.componentPath,
-            orderNum: menu.orderNum,
-            httpUrl: menu.httpUrl,
-            httpMethod: menu.httpMethod,
-            children: [],
-          });
-        }
-      }
-    });
-
-    for (let i = 0; i < rootMenuTree.length; i++) {
-      buildMenuTree(menusList, rootMenuTree[i]);
-    }
-
-    return { isSuccess: true, message: "", data: { menus: rootMenuTree } };
-  }
-
-  return { isSuccess: true, message: "", data: [] };
-};
-
-const buildMenuTree = (menus, parentMenu) => {
-  let childList = menus.filter((menu) => menu.parentId == parentMenu.id); //找到子菜单
-  if (childList.length > 0) {
-    childList.forEach((child) => {
-      buildMenuTree(menus, child);
-      if (!parentMenu.children.some((x) => x.id == child.id)) {
-        parentMenu.children.push(child);
-      }
-    });
-  }
-};
 
 const updateProfileAsync = async (id, user) => {
   if (user.gender !== undefined) {
@@ -311,6 +221,26 @@ const updateProfileAsync = async (id, user) => {
   return { isSuccess: true, message: "" };
 };
 
+const getUserRoleMetaAsync = async (id) => {
+  const user = await User.findByPk(id, {
+    attributes: ["id"],
+    include: [
+      {
+        model: Role,
+        as: "roles",
+        attributes: ["name"],
+        through: { attributes: [] },
+      },
+    ],
+  });
+
+  if (!user) return { exists: false, roles: [] };
+  const roleNames =
+    user.roles?.map((r) => (typeof r.name === "string" ? r.name.trim().toLowerCase() : "")) || [];
+
+  return { exists: true, roles: roleNames.filter(Boolean) };
+};
+
 module.exports = {
   getUserbyNameAsync,
   addUserAsync,
@@ -319,6 +249,6 @@ module.exports = {
   uptUserByIdAsync,
   checkUserNameAsync,
   getUserbyIdAsync,
-  getCurrentUserPermissListAsync,
   updateProfileAsync,
+  getUserRoleMetaAsync,
 };

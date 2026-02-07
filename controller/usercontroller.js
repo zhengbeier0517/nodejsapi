@@ -1,48 +1,48 @@
 const userService = require("../service/userService");
-const { User, Role } = require("../models");
 const bcrypt = require("bcryptjs");
 const { bcryptConfig } = require("../appConfig");
 const saltRounds = bcryptConfig?.saltRounds || 10;
 
-const isAdmin = (req) => {
-  const roles = req.user?.roles || [];
-  return roles.includes("admin") || roles.includes("super admin");
+const normalizeRoleName = (name) =>
+  typeof name === "string" ? name.trim().toLowerCase() : "";
+
+const getRoleContext = (req) => {
+  const roles = (req.user?.roles || []).map(normalizeRoleName).filter(Boolean);
+  const isSuperAdmin = roles.includes("super admin");
+  const isAdmin = isSuperAdmin || roles.includes("admin");
+  const allowedManagedRoles = isSuperAdmin
+    ? ["admin", "teacher", "student"]
+    : isAdmin
+    ? ["teacher", "student"]
+    : [];
+
+  return { roles, isAdmin, isSuperAdmin, allowedManagedRoles };
 };
 
+const canManageTargetRoles = (allowedRoles, targetRoles) =>
+  targetRoles.length > 0 && targetRoles.every((r) => allowedRoles.includes(r));
+
 const getTargetUserMeta = async (id) => {
-  const user = await User.findByPk(id, {
-    include: [
-      {
-        model: Role,
-        as: "roles",
-        attributes: ["name"],
-        through: { attributes: [] },
-      },
-    ],
-  });
-
-  if (!user) return { exists: false };
-
-  const roleNames = user.roles?.map((r) => r.name) || [];
+  const meta = await userService.getUserRoleMetaAsync(id);
   return {
-    exists: true,
-    isStudent: roleNames.includes("student"),
+    exists: meta.exists,
+    roles: (meta.roles || []).map(normalizeRoleName),
   };
 };
 
 /**
  * Create a new user.
- */
+  */
 const addUserAsync = async (req, res, next) => {
   try {
-    if (!isAdmin(req)) {
-      return res.sendCommonValue(403, "Only admin can create users");
+    const roleCtx = getRoleContext(req);
+    if (!roleCtx.isAdmin) {
+      return res.sendCommonValue(403, "Only admin or super admin can create users");
     }
 
-    const roleName = req.body.role || "student";
-    // Admins in this system only manage students
-    if (roleName !== "student") {
-      return res.sendCommonValue(403, "Admin can only create students");
+    const roleName = normalizeRoleName(req.body.role) || "student";
+    if (!roleCtx.allowedManagedRoles.includes(roleName)) {
+      return res.sendCommonValue(403, "Insufficient permission for this role");
     }
 
     const user = {
@@ -72,30 +72,35 @@ const addUserAsync = async (req, res, next) => {
 
 /**
  * Fetch single user profile by id.
- */
+  */
 const getProfileAsync = async (req, res, next) => {
   try {
     const { idOrName } = req.params;
     const requesterId = req.user?.id;
+    const roleCtx = getRoleContext(req);
 
     // If path param is numeric id, enforce self-access for non-admin.
     const isNumericId =
       typeof idOrName === "string" &&
       idOrName.trim() !== "" &&
       !Number.isNaN(Number(idOrName));
+    const isSelf =
+      isNumericId &&
+      requesterId !== undefined &&
+      Number(idOrName) === Number(requesterId);
 
-    if (isNumericId && !isAdmin(req) && Number(idOrName) !== requesterId) {
+    if (isNumericId && !roleCtx.isAdmin && !isSelf) {
       return res.sendCommonValue(403, "Forbidden");
     }
 
-    // If admin, allow but only for student targets
-    if (isNumericId && isAdmin(req)) {
+    // If admin, enforce allowed target roles unless self
+    if (isNumericId && roleCtx.isAdmin && !isSelf) {
       const meta = await getTargetUserMeta(Number(idOrName));
       if (!meta.exists) {
         return res.sendCommonValue(404, "user not found");
       }
-      if (!meta.isStudent) {
-        return res.sendCommonValue(403, "Admin can only manage students");
+      if (!canManageTargetRoles(roleCtx.allowedManagedRoles, meta.roles)) {
+        return res.sendCommonValue(403, "Insufficient permission for this user");
       }
     }
 
@@ -111,23 +116,23 @@ const getProfileAsync = async (req, res, next) => {
 
 /**
  * Delete one or more users by id list.
- */
+  */
 const delUserAsync = async (req, res, next) => {
   try {
     const { ids } = req.params;
-    if (!isAdmin(req)) {
-      return res.sendCommonValue(403, "Only admin can delete users");
+    const roleCtx = getRoleContext(req);
+    if (!roleCtx.isAdmin) {
+      return res.sendCommonValue(403, "Only admin or super admin can delete users");
     }
 
-    // Admin can only delete students
     const idList = ids.split(",").map((id) => Number(id));
     for (const id of idList) {
       const meta = await getTargetUserMeta(id);
       if (!meta.exists) {
         return res.sendCommonValue(404, "user not found");
       }
-      if (!meta.isStudent) {
-        return res.sendCommonValue(403, "Admin can only manage students");
+      if (!canManageTargetRoles(roleCtx.allowedManagedRoles, meta.roles)) {
+        return res.sendCommonValue(403, "Insufficient permission for this user");
       }
     }
 
@@ -143,25 +148,27 @@ const delUserAsync = async (req, res, next) => {
 };
 
 /**
- * Update basic user fields (no password currently).
+ * Update basic user fields .
  */
 const updateProfileAsync = async (req, res, next) => {
   try {
     const { id } = req.params;
     const requesterId = req.user?.id;
-    const admin = isAdmin(req);
+    const roleCtx = getRoleContext(req);
+    const admin = roleCtx.isAdmin;
+    const isSelf = requesterId !== undefined && Number(id) === Number(requesterId);
 
-    if (!admin && Number(id) !== requesterId) {
+    if (!admin && !isSelf) {
       return res.sendCommonValue(403, "Forbidden");
     }
 
-    if (admin) {
+    if (admin && !isSelf) {
       const meta = await getTargetUserMeta(Number(id));
       if (!meta.exists) {
         return res.sendCommonValue(404, "user not found");
       }
-      if (!meta.isStudent) {
-        return res.sendCommonValue(403, "Admin can only manage students");
+      if (!canManageTargetRoles(roleCtx.allowedManagedRoles, meta.roles)) {
+        return res.sendCommonValue(403, "Insufficient permission for this user");
       }
     }
 
@@ -210,14 +217,25 @@ const updateProfileAsync = async (req, res, next) => {
  */
 const listAsync = async (req, res, next) => {
   try {
-    if (!isAdmin(req)) {
-      return res.sendCommonValue(403, "Only admin can list users");
+    const roleCtx = getRoleContext(req);
+    if (!roleCtx.isAdmin) {
+      return res.sendCommonValue(403, "Only admin or super admin can list users");
     }
 
     const page = parseInt(req.query.page, 10) || 1;
     const pageSize = parseInt(req.query.pageSize, 10) || 10;
     const result = await userService.getUserListAsync(page, pageSize);
-    res.sendCommonValue(200, "success", result.data);
+    const allowedRoles = roleCtx.isSuperAdmin
+      ? ["super admin", "admin", "teacher", "student"]
+      : roleCtx.allowedManagedRoles;
+    const filteredItems = (result.data?.items || []).filter((u) =>
+      (u.roles || []).every((r) => allowedRoles.includes(normalizeRoleName(r)))
+    );
+    res.sendCommonValue(200, "success", {
+      ...result.data,
+      items: filteredItems,
+      total: filteredItems.length,
+    });
   } catch (err) {
     next(err);
   }
