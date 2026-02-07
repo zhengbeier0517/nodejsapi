@@ -44,13 +44,17 @@ const getUserbyNameAsync = async (userName) => {
 const addUserAsync = async (user) => {
   const t = await User.sequelize.transaction();
   try {
-    const roleName = user.role || "student";
-    const role = await Role.findOne({
-      where: { name: roleName },
+    const roleNames =
+      Array.isArray(user.roles) && user.roles.length > 0 ? user.roles : ["student"];
+    const uniqueRoleNames = Array.from(new Set(roleNames));
+
+    const roles = await Role.findAll({
+      where: { name: uniqueRoleNames },
       transaction: t,
       lock: t.LOCK.UPDATE,
     });
-    if (!role) {
+
+    if (roles.length !== uniqueRoleNames.length) {
       throw new EntityNotFoundException("role not found");
     }
 
@@ -71,10 +75,8 @@ const addUserAsync = async (user) => {
       { transaction: t }
     );
 
-    await UserRole.create(
-      { userId: newUser.id, roleId: role.id },
-      { transaction: t }
-    );
+    const userRoleRows = roles.map((r) => ({ userId: newUser.id, roleId: r.id }));
+    await UserRole.bulkCreate(userRoleRows, { transaction: t });
 
     await t.commit();
     return { isSuccess: true, message: "", data: { id: newUser.id } };
@@ -192,123 +194,97 @@ const getUserbyIdAsync = async (id) => {
   return { isSuccess: !!user, message: user ? "" : "user not found", data: user };
 };
 
-const getCurrentUserPermissListAsync = async (id) => {
-  const user = await User.findByPk(id, {
-    include: [
-      {
-        model: Role,
-        as: "roles",
-      },
-    ],
-  });
-
-  if (!user) {
-    throw new EntityNotFoundException("user not found");
-  }
-
-  if (user.roles && user.roles.length > 0) {
-    const roleIds = user.roles.map((role) => role.id);
-    const menus = await RoleMenu.findAll({
-      where: {
-        roleId: roleIds,
-      },
-      include: [
-        {
-          model: Menu,
-          as: "menus",
-        },
-      ],
-    });
-    let menusList = [];
-    if (menus && menus.length > 0) {
-      menusList = menus.map((menu) => ({
-        id: menu.menus.id,
-        title: menu.menus.title,
-        permission:
-          menu.menus.permission == undefined || menu.menus.permission == null
-            ? ""
-            : menu.menus.permission,
-        parentId: menu.menus.parentId,
-        route: menu.menus.route,
-        componentPath: menu.menus.componentPath,
-        orderNum: menu.menus.orderNum,
-        httpUrl: menu.menus.httpUrl,
-        httpMethod: menu.menus.httpMethod,
-        children: [],
-      }));
-    }
-
-    let rootMenuTree = [];
-    menusList.forEach((menu) => {
-      if (
-        menu.parentId == 0 ||
-        menu.parentId == null ||
-        menu.parentId == undefined
-      ) {
-        if (!rootMenuTree.some((x) => x.id == menu.id)) {
-          rootMenuTree.push({
-            id: menu.id,
-            title: menu.title,
-            parentId: menu.parentId,
-            route: menu.route,
-            componentPath: menu.componentPath,
-            orderNum: menu.orderNum,
-            httpUrl: menu.httpUrl,
-            httpMethod: menu.httpMethod,
-            children: [],
-          });
-        }
-      }
-    });
-
-    for (let i = 0; i < rootMenuTree.length; i++) {
-      buildMenuTree(menusList, rootMenuTree[i]);
-    }
-
-    return { isSuccess: true, message: "", data: { menus: rootMenuTree } };
-  }
-
-  return { isSuccess: true, message: "", data: [] };
-};
-
-const buildMenuTree = (menus, parentMenu) => {
-  let childList = menus.filter((menu) => menu.parentId == parentMenu.id); //找到子菜单
-  if (childList.length > 0) {
-    childList.forEach((child) => {
-      buildMenuTree(menus, child);
-      if (!parentMenu.children.some((x) => x.id == child.id)) {
-        parentMenu.children.push(child);
-      }
-    });
-  }
-};
 
 const updateProfileAsync = async (id, user) => {
-  if (user.gender !== undefined) {
+  const payload = { ...user };
+  const roleNames =
+    Array.isArray(payload.roles) && payload.roles.length > 0 ? payload.roles : undefined;
+  delete payload.roles;
+
+  if (payload.gender !== undefined) {
     const genderMap = {
       0: "other",
       1: "male",
       2: "female",
     };
-    if (typeof user.gender === "number") {
-      user.gender = genderMap[user.gender];
+    if (typeof payload.gender === "number") {
+      payload.gender = genderMap[payload.gender];
     }
 
     const allowed = ["male", "female", "other", null];
-    if (!allowed.includes(user.gender)) {
+    if (!allowed.includes(payload.gender)) {
       throw new UserFriendlyException("Invalid gender value");
     }
   }
 
-  const [affectedCount] = await User.update(user, {
-    where: { id: id },
+  const hasProfileFields = Object.keys(payload).length > 0;
+
+  return User.sequelize.transaction(async (t) => {
+    if (roleNames) {
+      const uniqueRoleNames = Array.from(new Set(roleNames));
+      const roles = await Role.findAll({
+        where: { name: uniqueRoleNames },
+        transaction: t,
+        lock: t.LOCK.UPDATE,
+      });
+      if (roles.length !== uniqueRoleNames.length) {
+        throw new EntityNotFoundException("role not found");
+      }
+
+      if (hasProfileFields) {
+        const [affectedCount] = await User.update(payload, {
+          where: { id },
+          transaction: t,
+        });
+        if (affectedCount === 0) {
+          throw new UserFriendlyException("User not found or no changes made");
+        }
+      } else {
+        const exists = await User.findByPk(id, { transaction: t, lock: t.LOCK.UPDATE });
+        if (!exists) {
+          throw new UserFriendlyException("User not found or no changes made");
+        }
+      }
+
+      await UserRole.destroy({ where: { userId: id }, transaction: t });
+      const rows = roles.map((r) => ({ userId: id, roleId: r.id }));
+      await UserRole.bulkCreate(rows, { transaction: t });
+    } else {
+      if (hasProfileFields) {
+        const [affectedCount] = await User.update(payload, {
+          where: { id },
+          transaction: t,
+        });
+        if (affectedCount === 0) {
+          throw new UserFriendlyException("User not found or no changes made");
+        }
+      } else {
+        throw new UserFriendlyException("No changes made");
+      }
+    }
+
+    return { isSuccess: true, message: "" };
+  });
+};
+
+const getUserRoleMetaAsync = async (id) => {
+  const user = await User.findByPk(id, {
+    attributes: ["id"],
+    include: [
+      {
+        model: Role,
+        as: "roles",
+        attributes: ["name"],
+        through: { attributes: [] },
+      },
+    ],
   });
 
-  if (affectedCount === 0) {
-    throw new UserFriendlyException("User not found or no changes made");
-  }
+  if (!user) return { exists: false, roles: [] };
+  const roleNames =
+    user.roles?.map((r) => (typeof r.name === "string" ? r.name.trim().toLowerCase() : "")) || [];
 
-  return { isSuccess: true, message: "" };
+  return { exists: true, roles: roleNames.filter(Boolean) };
 };
 
 module.exports = {
@@ -319,6 +295,6 @@ module.exports = {
   uptUserByIdAsync,
   checkUserNameAsync,
   getUserbyIdAsync,
-  getCurrentUserPermissListAsync,
   updateProfileAsync,
+  getUserRoleMetaAsync,
 };

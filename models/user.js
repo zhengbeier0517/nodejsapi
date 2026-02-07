@@ -21,52 +21,53 @@ const User = sequelize.define(
     },
 
     userName: {
-      type: DataTypes.STRING,
+      type: DataTypes.STRING(50),
       allowNull: false,
       unique: true,
-      validate: { notEmpty: true },
+      validate: { notEmpty: true, len: [1, 50] },
     },
 
     email: {
-      type: DataTypes.STRING,
+      type: DataTypes.STRING(254),
       allowNull: false,
       unique: true,
-      validate: { notEmpty: true, isEmail: true },
+      validate: { notEmpty: true, isEmail: true, len: [1, 254] },
     },
 
     password: {
-      type: DataTypes.STRING,
+      type: DataTypes.STRING(255),
       allowNull: false,
       validate: { notEmpty: true, len: [8, 255] },
     },
 
     firstName: {
-      type: DataTypes.STRING,
+      type: DataTypes.STRING(50),
       allowNull: false,
       set(value) {
         this.setDataValue("firstName", toCapitalized(value));
       },
-      validate: { notEmpty: true },
+      validate: { notEmpty: true, len: [1, 50] },
     },
 
     lastName: {
-      type: DataTypes.STRING,
+      type: DataTypes.STRING(50),
       allowNull: false,
       set(value) {
         this.setDataValue("lastName", toCapitalized(value));
       },
-      validate: { notEmpty: true },
+      validate: { notEmpty: true, len: [1, 50] },
     },
 
     phone: {
-      type: DataTypes.STRING,
+      type: DataTypes.STRING(20),
       allowNull: true,
       validate: {
         is: { args: [/^\d+$/], msg: "phone must be a numeric string" },
+        len: [0, 20],
       },
     },
 
-    address: { type: DataTypes.STRING, allowNull: true },
+    address: { type: DataTypes.STRING(255), allowNull: true, validate: { len: [0, 255] } },
 
     gender: {
       type: DataTypes.ENUM("male", "female", "other"),
@@ -75,9 +76,9 @@ const User = sequelize.define(
 
     dob: { type: DataTypes.DATEONLY, allowNull: true },
 
-    avatar: { type: DataTypes.STRING, allowNull: true },
+    avatar: { type: DataTypes.STRING(2048), allowNull: true, validate: { len: [0, 2048] } },
 
-    bio: { type: DataTypes.STRING, allowNull: true },
+    bio: { type: DataTypes.STRING(500), allowNull: true, validate: { len: [0, 500] } },
   },
   {
     tableName: "User",
