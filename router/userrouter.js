@@ -55,6 +55,11 @@ const userController = require("../controller/userController");
  *              role:
  *                type: string
  *                enum: [super admin, admin, teacher, student]
+ *              roles:
+ *                type: array
+ *                items:
+ *                  type: string
+ *                  enum: [super admin, admin, teacher, student]
  *     responses:
  *      200:
  *        description: Created
@@ -97,6 +102,17 @@ router.post(
       .trim()
       .isIn(["super admin", "admin", "teacher", "student"])
       .withMessage("invalid role"),
+    body("roles")
+      .optional()
+      .bail()
+      .isArray({ min: 1 })
+      .withMessage("roles must be a non-empty array")
+      .custom((arr) => arr.every((r) => typeof r === "string"))
+      .withMessage("roles must be strings")
+      .custom((arr) =>
+        arr.every((r) => ["super admin", "admin", "teacher", "student"].includes(r.trim()))
+      )
+      .withMessage("roles contains invalid value"),
   ]),
   userController.addUserAsync
 );
@@ -301,6 +317,24 @@ router.put(
       .withMessage("dob must be a valid date"),
     body("avatar").optional().bail().isString().trim(),
     body("bio").optional().bail().isString().trim(),
+    body("role")
+      .optional()
+      .bail()
+      .isString()
+      .trim()
+      .isIn(["super admin", "admin", "teacher", "student"])
+      .withMessage("invalid role"),
+    body("roles")
+      .optional()
+      .bail()
+      .isArray({ min: 1 })
+      .withMessage("roles must be a non-empty array")
+      .custom((arr) => arr.every((r) => typeof r === "string"))
+      .withMessage("roles must be strings")
+      .custom((arr) =>
+        arr.every((r) => ["super admin", "admin", "teacher", "student"].includes(r.trim()))
+      )
+      .withMessage("roles contains invalid value"),
   ]),
   userController.updateProfileAsync
 );

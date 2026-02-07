@@ -6,15 +6,21 @@ const saltRounds = bcryptConfig?.saltRounds || 10;
 const normalizeRoleName = (name) =>
   typeof name === "string" ? name.trim().toLowerCase() : "";
 
+const normalizeRoles = (input) => {
+  if (Array.isArray(input)) {
+    return Array.from(
+      new Set(input.map(normalizeRoleName).filter((r) => r.length > 0))
+    );
+  }
+  const single = normalizeRoleName(input);
+  return single ? [single] : [];
+};
+
 const getRoleContext = (req) => {
   const roles = (req.user?.roles || []).map(normalizeRoleName).filter(Boolean);
   const isSuperAdmin = roles.includes("super admin");
   const isAdmin = isSuperAdmin || roles.includes("admin");
-  const allowedManagedRoles = isSuperAdmin
-    ? ["admin", "teacher", "student"]
-    : isAdmin
-    ? ["teacher", "student"]
-    : [];
+  const allowedManagedRoles = isSuperAdmin ? ["admin", "teacher", "student"] : isAdmin ? ["teacher", "student"] : [];
 
   return { roles, isAdmin, isSuperAdmin, allowedManagedRoles };
 };
@@ -40,9 +46,15 @@ const addUserAsync = async (req, res, next) => {
       return res.sendCommonValue(403, "Only admin or super admin can create users");
     }
 
-    const roleName = normalizeRoleName(req.body.role) || "student";
-    if (!roleCtx.allowedManagedRoles.includes(roleName)) {
-      return res.sendCommonValue(403, "Insufficient permission for this role");
+    const requestedRoles = normalizeRoles(req.body.roles ?? req.body.role);
+    const rolesToAssign = requestedRoles.length > 0 ? requestedRoles : ["student"];
+
+    const createAllowedRoles = roleCtx.isSuperAdmin
+      ? [...roleCtx.allowedManagedRoles, "super admin"]
+      : roleCtx.allowedManagedRoles;
+    const allowedRolesSet = new Set(createAllowedRoles);
+    if (!rolesToAssign.every((r) => allowedRolesSet.has(r))) {
+      return res.sendCommonValue(403, "Insufficient permission for one or more roles");
     }
 
     const user = {
@@ -57,7 +69,7 @@ const addUserAsync = async (req, res, next) => {
       dob: req.body.dob,
       avatar: req.body.avatar,
       bio: req.body.bio,
-      role: roleName,
+      roles: rolesToAssign,
     };
     const result = await userService.addUserAsync(user);
     if (result.isSuccess) {
@@ -99,6 +111,9 @@ const getProfileAsync = async (req, res, next) => {
       if (!meta.exists) {
         return res.sendCommonValue(404, "user not found");
       }
+      if (meta.roles.includes("super admin")) {
+        return res.sendCommonValue(403, "Insufficient permission for this user");
+      }
       if (!canManageTargetRoles(roleCtx.allowedManagedRoles, meta.roles)) {
         return res.sendCommonValue(403, "Insufficient permission for this user");
       }
@@ -130,6 +145,9 @@ const delUserAsync = async (req, res, next) => {
       const meta = await getTargetUserMeta(id);
       if (!meta.exists) {
         return res.sendCommonValue(404, "user not found");
+      }
+      if (meta.roles.includes("super admin") && req.user?.id !== id) {
+        return res.sendCommonValue(403, "Cannot delete this user");
       }
       if (!canManageTargetRoles(roleCtx.allowedManagedRoles, meta.roles)) {
         return res.sendCommonValue(403, "Insufficient permission for this user");
@@ -167,9 +185,30 @@ const updateProfileAsync = async (req, res, next) => {
       if (!meta.exists) {
         return res.sendCommonValue(404, "user not found");
       }
+      if (meta.roles.includes("super admin")) {
+        return res.sendCommonValue(403, "Insufficient permission for this user");
+      }
       if (!canManageTargetRoles(roleCtx.allowedManagedRoles, meta.roles)) {
         return res.sendCommonValue(403, "Insufficient permission for this user");
       }
+    }
+
+    let rolesToSet;
+    if (req.body.roles !== undefined || req.body.role !== undefined) {
+      if (!admin) {
+        return res.sendCommonValue(403, "Only admin or super admin can change roles");
+      }
+      const normalizedRoles = normalizeRoles(req.body.roles ?? req.body.role);
+      if (normalizedRoles.length === 0) {
+        return res.sendCommonValue(400, "roles cannot be empty");
+      }
+      const allowedRoleNames = roleCtx.isSuperAdmin
+        ? ["super admin", "admin", "teacher", "student"]
+        : ["teacher", "student"];
+      if (!normalizedRoles.every((r) => allowedRoleNames.includes(r))) {
+        return res.sendCommonValue(403, "Insufficient permission for one or more roles");
+      }
+      rolesToSet = normalizedRoles;
     }
 
     const payload = {
@@ -184,6 +223,7 @@ const updateProfileAsync = async (req, res, next) => {
       dob: req.body.dob,
       avatar: req.body.avatar,
       bio: req.body.bio,
+      roles: rolesToSet,
     };
 
     // strip undefined fields so we only update what was sent
@@ -228,9 +268,14 @@ const listAsync = async (req, res, next) => {
     const allowedRoles = roleCtx.isSuperAdmin
       ? ["super admin", "admin", "teacher", "student"]
       : roleCtx.allowedManagedRoles;
-    const filteredItems = (result.data?.items || []).filter((u) =>
-      (u.roles || []).every((r) => allowedRoles.includes(normalizeRoleName(r)))
-    );
+    const filteredItems = (result.data?.items || []).filter((u) => {
+      const roles = (u.roles || []).map(normalizeRoleName);
+      const hasSuper = roles.includes("super admin");
+      if (hasSuper && req.user?.id !== u.id) {
+        return false;
+      }
+      return roles.every((r) => allowedRoles.includes(r));
+    });
     res.sendCommonValue(200, "success", {
       ...result.data,
       items: filteredItems,
