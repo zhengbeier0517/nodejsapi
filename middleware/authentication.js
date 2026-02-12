@@ -4,24 +4,18 @@ const cacheHelper = require("../common/cache/cacheHelper");
 
 const authenticate = async (req, res, next) => {
   const authHeader = req.headers.authorization;
-  const token = authHeader ? authHeader.split(" ")[1] : "";
+  const accessToken = authHeader ? authHeader.split(" ")[1] : "";
 
-  // Check if token exists
-  if (!token) {
-    return res.sendCommonValue(401, "Token is required");
-  }
-
-  // Check if token is blacklisted
-  const isBlacklisted = await cacheHelper.hasAsync(token);
-  if (isBlacklisted) {
-    return res.sendCommonValue(401, "Token is blacklisted");
+  // Check if token is provided
+  if (!accessToken) {
+    return res.sendCommonValue(401, "Access token is required");
   }
 
   // Check if token is valid
   let decoded;
   try {
     decoded = jwt.verify(
-      token,
+      accessToken,
       jwtConfig.accessSecret,
       {
         audience: jwtConfig.audience,
@@ -30,7 +24,13 @@ const authenticate = async (req, res, next) => {
       }
     );
   } catch {
-    return res.sendCommonValue(401, "Token is invalid or expired");
+    return res.sendCommonValue(401, "Access token is invalid or expired");
+  }
+
+  // Check if token is blacklisted
+  const isBlacklisted = await cacheHelper.hasAsync(`auth:access:${decoded.id}:${decoded.jti}`);
+  if (isBlacklisted) {
+    return res.sendCommonValue(401, "Access token is blacklisted");
   }
 
   // Attach user info and token to request object
@@ -40,7 +40,7 @@ const authenticate = async (req, res, next) => {
     lastName: decoded.lastName,
     roles: decoded.roles,
   };
-  req.token = token;
+  req.token = accessToken;
 
   return next();
 };

@@ -46,7 +46,18 @@ const logout = async (req, res) => {
 
   const result = await authService.logout(accessToken, refreshToken);
   if (result.isSuccess) {
-    res.sendCommonValue(204, result.message);
+    res.sendCommonValue(200, result.message, result.data);
+  } else {
+    res.sendCommonValue(401, result.message);
+  }
+};
+
+const forceLogout = async (req, res) => {
+  const userId = req.body.userId;
+
+  const result = await authService.forceLogout(userId);
+  if (result.isSuccess) {
+    res.sendCommonValue(200, result.message, result.data);
   } else {
     res.sendCommonValue(401, result.message);
   }
@@ -57,4 +68,5 @@ module.exports = {
   login,
   refresh,
   logout,
+  forceLogout,
 };
