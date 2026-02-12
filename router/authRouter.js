@@ -130,6 +130,8 @@ router.post(
  *     responses:
  *       200:
  *         description: OK
+ *       400:
+ *         description: Bad Request
  *       401:
  *         description: Unauthorized
  *       500:
@@ -137,7 +139,6 @@ router.post(
  */
 router.post(
   "/refresh",
-  authenticate,
   commonValidate([
     body("refreshToken").notEmpty().withMessage("Refresh token is required"),
   ]),

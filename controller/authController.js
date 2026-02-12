@@ -30,10 +30,9 @@ const login = async (req, res) => {
 };
 
 const refresh = async (req, res) => {
-  const accessToken = req.token;
   const refreshToken = req.body.refreshToken;
 
-  const result = await authService.refresh(accessToken, refreshToken);
+  const result = await authService.refresh(refreshToken);
   if (result.isSuccess) {
     res.sendCommonValue(200, result.message, result.data);
   } else {

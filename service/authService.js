@@ -222,26 +222,19 @@ const login = async (payload) => {
 };
 
 /**
- * Blacklist token
- * @param {string} token
- */
-const blacklistToken = async (token) => {
-  const decoded = jwt.decode(token);
-  const ttl = decoded.exp * 1000 - Date.now();
-
-  if (ttl > 0) {
-    await cacheHelper.setAsync(token, true, ttl);
-  }
-};
-
-/**
  * Refresh
- * @param {string} accessToken
  * @param {string} refreshToken
  * @returns
  */
-const refresh = async (accessToken, refreshToken) => {
-  await blacklistToken(accessToken);
+const refresh = async (refreshToken) => {
+  // Check if refresh token is blacklisted
+  const isBlacklisted = await cacheHelper.getAsync(refreshToken);
+  if (isBlacklisted) {
+    return {
+      isSuccess: false,
+      message: "Refresh token is blacklisted",
+    };
+  }
 
   // Check if refresh token is valid
   let decoded;
@@ -274,11 +267,22 @@ const refresh = async (accessToken, refreshToken) => {
     isSuccess: true,
     message: "Refresh successful",
     data: {
-      user,
       accessToken: newAccessToken,
-      refreshToken,
     },
   };
+};
+
+/**
+ * Blacklist token
+ * @param {string} token
+ */
+const blacklistToken = async (token) => {
+  const decoded = jwt.decode(token);
+  const ttl = decoded.exp * 1000 - Date.now();
+
+  if (ttl > 0) {
+    await cacheHelper.setAsync(token, true, ttl);
+  }
 };
 
 /**
