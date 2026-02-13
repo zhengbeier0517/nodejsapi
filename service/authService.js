@@ -258,6 +258,15 @@ const refresh = async (refreshToken) => {
     };
   }
 
+  // Check if user is forced to logout
+  const forceLogoutAt = await cacheHelper.getAsync(`auth:forceLogout:${decoded.id}`);
+  if (forceLogoutAt && decoded.iat * 1000 < forceLogoutAt) {
+    return {
+      isSuccess: false,
+      message: "User is forced to logout",
+    };
+  }
+
   const user = {
     id: decoded.id,
     firstName: decoded.firstName,
@@ -306,6 +315,33 @@ const logout = async (accessToken, refreshToken) => {
 };
 
 /**
+ * Parse expiresIn to milliseconds
+ * @param {string} expiresIn
+ * @returns
+ */
+const parseExpiresInToMs = (expiresIn) => {
+  const m = expiresIn.match(/^(\d+(\.\d+)?)(ms|s|m|h|d|w|y)$/);
+
+  if (!m) {
+    throw new Error("Invalid expiresIn format");
+  }
+
+  const value = Number(m[1]);
+  const unit = m[3];
+  const unitToMs = {
+    ms: 1,
+    s: 1000,
+    m: 60 * 1000,
+    h: 60 * 60 * 1000,
+    d: 24 * 60 * 60 * 1000,
+    w: 7 * 24 * 60 * 60 * 1000,
+    y: 365 * 24 * 60 * 60 * 1000,
+  };
+
+  return value * unitToMs[unit];
+};
+
+/**
  * Force logout
  * @param {number} userId
  * @returns
@@ -320,8 +356,14 @@ const forceLogout = async (userId) => {
     throw new EntityNotFoundException("User not found");
   }
 
-  // 
-  
+  const forceLogoutAt = Date.now();
+  const ttl = parseExpiresInToMs(jwtConfig.refreshExpiresIn);
+  await cacheHelper.setAsync(`auth:forceLogout:${userId}`, forceLogoutAt, ttl);
+
+  return {
+    isSuccess: true,
+    message: "Force logout successful",
+  };
 };
 
 module.exports = {

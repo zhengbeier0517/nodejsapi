@@ -33,6 +33,12 @@ const authenticate = async (req, res, next) => {
     return res.sendCommonValue(401, "Access token is blacklisted");
   }
 
+  // Check if user is forced to logout
+  const forceLogoutAt = await cacheHelper.getAsync(`auth:forceLogout:${decoded.id}`);
+  if (forceLogoutAt && decoded.iat * 1000 < forceLogoutAt) {
+    return res.sendCommonValue(401, "User is forced to logout");
+  }
+
   // Attach user info and token to request object
   req.user = {
     id: decoded.id,
