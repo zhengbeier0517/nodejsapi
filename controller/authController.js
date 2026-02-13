@@ -63,10 +63,22 @@ const forceLogout = async (req, res) => {
   }
 };
 
+const disableUser = async (req, res) => {
+  const userId = req.body.userId;
+
+  const result = await authService.disableUser(userId);
+  if (result.isSuccess) {
+    res.sendCommonValue(200, result.message, result.data);
+  } else {
+    res.sendCommonValue(401, result.message);
+  }
+};
+
 module.exports = {
   register,
   login,
   refresh,
   logout,
   forceLogout,
+  disableUser,
 };

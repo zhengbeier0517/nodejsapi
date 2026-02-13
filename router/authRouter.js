@@ -217,9 +217,52 @@ router.post(
   authenticate,
   requireAdmin,
   commonValidate([
-    body("userId").notEmpty().withMessage("User ID is required").bail().isInt().withMessage("User ID must be an integer"),
+    body("userId").notEmpty().withMessage("User ID is required").bail().isInt({ min: 1 }).withMessage("User ID must be a positive integer"),
   ]),
   authController.forceLogout
+);
+
+/**
+ * @openapi
+ * /api/auth/disable-user:
+ *   post:
+ *     tags:
+ *       - Auth
+ *     summary: Disable User (Admin Only)
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *             properties:
+ *               userId:
+ *                 type: integer
+ *                 default: 2
+ *     responses:
+ *       200:
+ *         description: OK
+ *       400:
+ *         description: Bad Request
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       500:
+ *         description: Internal Server Error
+ */
+router.post(
+  "/disable-user",
+  authenticate,
+  requireAdmin,
+  commonValidate([
+    body("userId").notEmpty().withMessage("User ID is required").bail().isInt({ min: 1 }).withMessage("User ID must be a positive integer"),
+  ]),
+  authController.disableUser
 );
 
 module.exports = router;

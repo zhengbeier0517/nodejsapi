@@ -39,6 +39,12 @@ const authenticate = async (req, res, next) => {
     return res.sendCommonValue(401, "User is forced to logout");
   }
 
+  // Check if user is disabled
+  const isDisabled = await cacheHelper.getAsync(`auth:disableUser:${decoded.id}`);
+  if (isDisabled) {
+    return res.sendCommonValue(401, "User is disabled");
+  }
+
   // Attach user info and token to request object
   req.user = {
     id: decoded.id,

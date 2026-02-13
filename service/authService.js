@@ -196,8 +196,18 @@ const signRefreshToken = (user) => {
  */
 const login = async (payload) => {
   const user = await getByUsername(payload.userName);
-  const isPasswordMatch = await bcrypt.compare(payload.password, user.password);
 
+  // Check if user is disabled
+  const isDisabled = await cacheHelper.getAsync(`auth:disableUser:${user.id}`);
+  if (isDisabled) {
+    return {
+      isSuccess: false,
+      message: "User is disabled",
+    };
+  }
+
+  // Check if password is correct
+  const isPasswordMatch = await bcrypt.compare(payload.password, user.password);
   if (!isPasswordMatch) {
     return {
       isSuccess: false,
@@ -267,6 +277,15 @@ const refresh = async (refreshToken) => {
     };
   }
 
+  // Check if user is disabled
+  const isDisabled = await cacheHelper.getAsync(`auth:disableUser:${decoded.id}`);
+  if (isDisabled) {
+    return {
+      isSuccess: false,
+      message: "User is disabled",
+    };
+  }
+
   const user = {
     id: decoded.id,
     firstName: decoded.firstName,
@@ -315,6 +334,20 @@ const logout = async (accessToken, refreshToken) => {
 };
 
 /**
+ * Check if user exists
+ * @param {number} userId
+ */
+const checkUserExists = async (userId) => {
+  const user = await User.findByPk(userId, {
+    attributes: ["id"],
+  });
+
+  if (!user) {
+    throw new EntityNotFoundException("User not found");
+  }
+};
+
+/**
  * Parse expiresIn to milliseconds
  * @param {string} expiresIn
  * @returns
@@ -347,15 +380,7 @@ const parseExpiresInToMs = (expiresIn) => {
  * @returns
  */
 const forceLogout = async (userId) => {
-  // Check if user exists
-  const user = await User.findByPk(userId, {
-    attributes: ["id"],
-  });
-
-  if (!user) {
-    throw new EntityNotFoundException("User not found");
-  }
-
+  await checkUserExists(userId);
   const forceLogoutAt = Date.now();
   const ttl = parseExpiresInToMs(jwtConfig.refreshExpiresIn);
   await cacheHelper.setAsync(`auth:forceLogout:${userId}`, forceLogoutAt, ttl);
@@ -366,10 +391,27 @@ const forceLogout = async (userId) => {
   };
 };
 
+/**
+ * Disable user
+ * @param {number} userId
+ * @returns
+ */
+const disableUser = async (userId) => {
+  await checkUserExists(userId);
+  const ttl = parseExpiresInToMs("100y");
+  await cacheHelper.setAsync(`auth:disableUser:${userId}`, true, ttl);
+
+  return {
+    isSuccess: true,
+    message: "Disable user successful",
+  };
+};
+
 module.exports = {
   register,
   login,
   refresh,
   logout,
   forceLogout,
+  disableUser,
 };
