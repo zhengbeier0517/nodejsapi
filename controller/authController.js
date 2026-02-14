@@ -30,10 +30,9 @@ const login = async (req, res) => {
 };
 
 const refresh = async (req, res) => {
-  const accessToken = req.token;
   const refreshToken = req.body.refreshToken;
 
-  const result = await authService.refresh(accessToken, refreshToken);
+  const result = await authService.refresh(refreshToken);
   if (result.isSuccess) {
     res.sendCommonValue(200, result.message, result.data);
   } else {
@@ -47,7 +46,29 @@ const logout = async (req, res) => {
 
   const result = await authService.logout(accessToken, refreshToken);
   if (result.isSuccess) {
-    res.sendCommonValue(204, result.message);
+    res.sendCommonValue(200, result.message, result.data);
+  } else {
+    res.sendCommonValue(401, result.message);
+  }
+};
+
+const forceLogout = async (req, res) => {
+  const userId = req.body.userId;
+
+  const result = await authService.forceLogout(userId);
+  if (result.isSuccess) {
+    res.sendCommonValue(200, result.message, result.data);
+  } else {
+    res.sendCommonValue(401, result.message);
+  }
+};
+
+const disableUser = async (req, res) => {
+  const userId = req.body.userId;
+
+  const result = await authService.disableUser(userId);
+  if (result.isSuccess) {
+    res.sendCommonValue(200, result.message, result.data);
   } else {
     res.sendCommonValue(401, result.message);
   }
@@ -58,4 +79,6 @@ module.exports = {
   login,
   refresh,
   logout,
+  forceLogout,
+  disableUser,
 };

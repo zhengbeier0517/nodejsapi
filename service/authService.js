@@ -13,6 +13,7 @@ const {
   bcryptConfig,
   jwtConfig,
 } = require("../appConfig");
+const crypto = require("crypto");
 
 /**
  * Check if username already exists
@@ -128,7 +129,7 @@ const getByUsername = async (userName) => {
   });
 
   if (!user) {
-    throw new EntityNotFoundException("Username not found");
+    throw new EntityNotFoundException("User not found");
   }
 
   return {
@@ -152,6 +153,7 @@ const signAccessToken = (user) => {
       firstName: user.firstName,
       lastName: user.lastName,
       roles: user.roles,
+      jti: crypto.randomUUID(),
     },
     jwtConfig.accessSecret,
     {
@@ -175,6 +177,7 @@ const signRefreshToken = (user) => {
       firstName: user.firstName,
       lastName: user.lastName,
       roles: user.roles,
+      jti: crypto.randomUUID(),
     },
     jwtConfig.refreshSecret,
     {
@@ -193,8 +196,18 @@ const signRefreshToken = (user) => {
  */
 const login = async (payload) => {
   const user = await getByUsername(payload.userName);
-  const isPasswordMatch = await bcrypt.compare(payload.password, user.password);
 
+  // Check if user is disabled
+  const isDisabled = await cacheHelper.getAsync(`auth:disableUser:${user.id}`);
+  if (isDisabled) {
+    return {
+      isSuccess: false,
+      message: "User is disabled",
+    };
+  }
+
+  // Check if password is correct
+  const isPasswordMatch = await bcrypt.compare(payload.password, user.password);
   if (!isPasswordMatch) {
     return {
       isSuccess: false,
@@ -222,27 +235,11 @@ const login = async (payload) => {
 };
 
 /**
- * Blacklist token
- * @param {string} token
- */
-const blacklistToken = async (token) => {
-  const decoded = jwt.decode(token);
-  const ttl = decoded.exp * 1000 - Date.now();
-
-  if (ttl > 0) {
-    await cacheHelper.setAsync(token, true, ttl);
-  }
-};
-
-/**
  * Refresh
- * @param {string} accessToken
  * @param {string} refreshToken
  * @returns
  */
-const refresh = async (accessToken, refreshToken) => {
-  await blacklistToken(accessToken);
-
+const refresh = async (refreshToken) => {
   // Check if refresh token is valid
   let decoded;
   try {
@@ -262,6 +259,33 @@ const refresh = async (accessToken, refreshToken) => {
     };
   }
 
+  // Check if refresh token is blacklisted
+  const isBlacklisted = await cacheHelper.getAsync(`auth:refresh:${decoded.id}:${decoded.jti}`);
+  if (isBlacklisted) {
+    return {
+      isSuccess: false,
+      message: "Refresh token is blacklisted",
+    };
+  }
+
+  // Check if user is forced to logout
+  const forceLogoutAt = await cacheHelper.getAsync(`auth:forceLogout:${decoded.id}`);
+  if (forceLogoutAt && decoded.iat * 1000 < forceLogoutAt) {
+    return {
+      isSuccess: false,
+      message: "User is forced to logout",
+    };
+  }
+
+  // Check if user is disabled
+  const isDisabled = await cacheHelper.getAsync(`auth:disableUser:${decoded.id}`);
+  if (isDisabled) {
+    return {
+      isSuccess: false,
+      message: "User is disabled",
+    };
+  }
+
   const user = {
     id: decoded.id,
     firstName: decoded.firstName,
@@ -274,11 +298,23 @@ const refresh = async (accessToken, refreshToken) => {
     isSuccess: true,
     message: "Refresh successful",
     data: {
-      user,
       accessToken: newAccessToken,
-      refreshToken,
     },
   };
+};
+
+/**
+ * Blacklist token
+ * @param {string} token
+ * @param {string} type
+ */
+const blacklistToken = async (token, type) => {
+  const decoded = jwt.decode(token);
+  const ttl = decoded.exp * 1000 - Date.now();
+
+  if (ttl > 0) {
+    await cacheHelper.setAsync(`auth:${type}:${decoded.id}:${decoded.jti}`, true, ttl);
+  }
 };
 
 /**
@@ -288,12 +324,86 @@ const refresh = async (accessToken, refreshToken) => {
  * @returns
  */
 const logout = async (accessToken, refreshToken) => {
-  await blacklistToken(accessToken);
-  await blacklistToken(refreshToken);
+  await blacklistToken(accessToken, "access");
+  await blacklistToken(refreshToken, "refresh");
 
   return {
     isSuccess: true,
     message: "Logout successful",
+  };
+};
+
+/**
+ * Check if user exists
+ * @param {number} userId
+ */
+const checkUserExists = async (userId) => {
+  const user = await User.findByPk(userId, {
+    attributes: ["id"],
+  });
+
+  if (!user) {
+    throw new EntityNotFoundException("User not found");
+  }
+};
+
+/**
+ * Parse expiresIn to milliseconds
+ * @param {string} expiresIn
+ * @returns
+ */
+const parseExpiresInToMs = (expiresIn) => {
+  const m = expiresIn.match(/^(\d+(\.\d+)?)(ms|s|m|h|d|w|y)$/);
+
+  if (!m) {
+    throw new Error("Invalid expiresIn format");
+  }
+
+  const value = Number(m[1]);
+  const unit = m[3];
+  const unitToMs = {
+    ms: 1,
+    s: 1000,
+    m: 60 * 1000,
+    h: 60 * 60 * 1000,
+    d: 24 * 60 * 60 * 1000,
+    w: 7 * 24 * 60 * 60 * 1000,
+    y: 365 * 24 * 60 * 60 * 1000,
+  };
+
+  return value * unitToMs[unit];
+};
+
+/**
+ * Force logout
+ * @param {number} userId
+ * @returns
+ */
+const forceLogout = async (userId) => {
+  await checkUserExists(userId);
+  const forceLogoutAt = Date.now();
+  const ttl = parseExpiresInToMs(jwtConfig.refreshExpiresIn);
+  await cacheHelper.setAsync(`auth:forceLogout:${userId}`, forceLogoutAt, ttl);
+
+  return {
+    isSuccess: true,
+    message: "Force logout successful",
+  };
+};
+
+/**
+ * Disable user
+ * @param {number} userId
+ * @returns
+ */
+const disableUser = async (userId) => {
+  await checkUserExists(userId);
+  const ttl = parseExpiresInToMs("100y");
+  await cacheHelper.setAsync(`auth:disableUser:${userId}`, true, ttl);
+
+  return {
+    isSuccess: true,
+    message: "Disable user successful",
   };
 };
 
@@ -302,4 +412,6 @@ module.exports = {
   login,
   refresh,
   logout,
+  forceLogout,
+  disableUser,
 };

@@ -4,6 +4,7 @@ const router = express.Router();
 const { body } = require("express-validator");
 const { commonValidate } = require("../middleware/expressValidator");
 const { authenticate } = require("../middleware/authentication");
+const { requireAdmin } = require("../middleware/authorization");
 
 const authController = require("../controller/authController");
 
@@ -130,6 +131,8 @@ router.post(
  *     responses:
  *       200:
  *         description: OK
+ *       400:
+ *         description: Bad Request
  *       401:
  *         description: Unauthorized
  *       500:
@@ -137,7 +140,6 @@ router.post(
  */
 router.post(
   "/refresh",
-  authenticate,
   commonValidate([
     body("refreshToken").notEmpty().withMessage("Refresh token is required"),
   ]),
@@ -164,8 +166,8 @@ router.post(
  *                 type: string
  *                 default: REFRESH_TOKEN
  *     responses:
- *       204:
- *         description: No Content
+ *       200:
+ *         description: OK
  *       401:
  *         description: Unauthorized
  *       500:
@@ -175,6 +177,92 @@ router.post(
   "/logout",
   authenticate,
   authController.logout
+);
+
+/**
+ * @openapi
+ * /api/auth/force-logout:
+ *   post:
+ *     tags:
+ *       - Auth
+ *     summary: Force Logout (Admin Only)
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *             properties:
+ *               userId:
+ *                 type: integer
+ *                 default: 2
+ *     responses:
+ *       200:
+ *         description: OK
+ *       400:
+ *         description: Bad Request
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       500:
+ *         description: Internal Server Error
+ */
+router.post(
+  "/force-logout",
+  authenticate,
+  requireAdmin,
+  commonValidate([
+    body("userId").notEmpty().withMessage("User ID is required").bail().isInt({ min: 1 }).withMessage("User ID must be a positive integer"),
+  ]),
+  authController.forceLogout
+);
+
+/**
+ * @openapi
+ * /api/auth/disable-user:
+ *   post:
+ *     tags:
+ *       - Auth
+ *     summary: Disable User (Admin Only)
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *             properties:
+ *               userId:
+ *                 type: integer
+ *                 default: 2
+ *     responses:
+ *       200:
+ *         description: OK
+ *       400:
+ *         description: Bad Request
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       500:
+ *         description: Internal Server Error
+ */
+router.post(
+  "/disable-user",
+  authenticate,
+  requireAdmin,
+  commonValidate([
+    body("userId").notEmpty().withMessage("User ID is required").bail().isInt({ min: 1 }).withMessage("User ID must be a positive integer"),
+  ]),
+  authController.disableUser
 );
 
 module.exports = router;

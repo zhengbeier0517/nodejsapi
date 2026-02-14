@@ -1,4 +1,8 @@
 # Change Log
+## 2026-02-14
+### Added
+- Added testHelper.js, testSetup.js files to tests/
+- Added global test setup to jest.config.js
 ## 2026-02-07
 ### Added
 - Added tests/ folder
