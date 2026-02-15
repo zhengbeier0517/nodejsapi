@@ -62,6 +62,22 @@ const admin = {
 };
 const adminAuthHeader = createAuthHeader(admin);
 
+const superAdmin = {
+  id: 187,
+  firstName: "test",
+  lastName: "superadmin",
+  roles: ["super admin"],
+};
+const superAdminAuthHeader = createAuthHeader(superAdmin);
+
+const teacher = {
+  id: 300,
+  firstName: "test",
+  lastName: "teacher",
+  roles: ["teacher"],
+};
+const teacherAuthHeader = createAuthHeader(teacher);
+
 const student = {
   id: 500,
   firstName: "test",
@@ -75,5 +91,7 @@ module.exports = {
   closeDB,
   initRole,
   adminAuthHeader,
+  superAdminAuthHeader,
+  teacherAuthHeader,
   studentAuthHeader,
 };

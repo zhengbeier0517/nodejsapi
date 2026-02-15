@@ -1,24 +1,12 @@
 const request = require("supertest");
-const jwt = require("jsonwebtoken");
 const app = require("../app");
-const { jwtConfig } = require("../appConfig");
-const { User, Role, UserRole, sequelize } = require("../models");
-const { sequelize: rawSequelize } = require("../db/sequelizedb");
-
-const signToken = (id, roles) =>
-  jwt.sign(
-    { id, roles },
-    jwtConfig.accessSecret,
-    {
-      audience: jwtConfig.audience,
-      issuer: jwtConfig.issuer,
-      algorithm: jwtConfig.algorithms[0],
-      expiresIn: "1h",
-    }
-  );
-
-const superAdminHeader = { Authorization: `Bearer ${signToken(90001, ["super admin"])}` };
-const adminHeader = { Authorization: `Bearer ${signToken(90002, ["admin"])}` };
+const { User, Role, UserRole } = require("../models");
+const {
+  adminAuthHeader,
+  superAdminAuthHeader,
+  teacherAuthHeader,
+  studentAuthHeader,
+} = require("./testHelper");
 
 const buildUserPayload = (overrides = {}) => ({
   userName: `user-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
@@ -29,6 +17,9 @@ const buildUserPayload = (overrides = {}) => ({
   roles: ["student"],
   ...overrides,
 });
+
+const createUser = (payload, authHeader = superAdminAuthHeader) =>
+  request(app).post("/api/users").set("Authorization", authHeader).send(payload);
 
 const findUserWithRoles = async (userName) => {
   return User.findOne({
@@ -55,15 +46,13 @@ describe("User API role management", () => {
         await User.destroy({ where: { id: user.id } });
       }
     }
-    await rawSequelize.close();
-    await sequelize.close();
   });
 
   it("super admin can create a user with super admin role", async () => {
     const payload = buildUserPayload({ roles: ["super admin", "admin"] });
     usersToCleanup.push(payload.userName);
 
-    const res = await request(app).post("/api/users").set(superAdminHeader).send(payload);
+    const res = await createUser(payload, superAdminAuthHeader);
     expect(res.status).toBe(200);
     expect(res.body.isSuccess).toBe(true);
 
@@ -77,7 +66,7 @@ describe("User API role management", () => {
     const payload = buildUserPayload({ roles: ["student"] });
     usersToCleanup.push(payload.userName);
 
-    const resCreate = await request(app).post("/api/users").set(superAdminHeader).send(payload);
+    const resCreate = await createUser(payload, superAdminAuthHeader);
     expect(resCreate.status).toBe(200);
 
     const created = await findUserWithRoles(payload.userName);
@@ -85,7 +74,7 @@ describe("User API role management", () => {
 
     const resUpdate = await request(app)
       .put(`/api/users/${created.id}`)
-      .set(adminHeader)
+      .set("Authorization", adminAuthHeader)
       .send({ roles: ["super admin"] });
     expect(resUpdate.status).toBe(403);
   });
@@ -94,7 +83,7 @@ describe("User API role management", () => {
     const payload = buildUserPayload({ roles: ["student"] });
     usersToCleanup.push(payload.userName);
 
-    const resCreate = await request(app).post("/api/users").set(superAdminHeader).send(payload);
+    const resCreate = await createUser(payload, superAdminAuthHeader);
     expect(resCreate.status).toBe(200);
 
     const created = await findUserWithRoles(payload.userName);
@@ -102,7 +91,7 @@ describe("User API role management", () => {
 
     const resUpdate = await request(app)
       .put(`/api/users/${created.id}`)
-      .set(adminHeader)
+      .set("Authorization", adminAuthHeader)
       .send({ roles: ["teacher", "student"] });
     expect(resUpdate.status).toBe(200);
     expect(resUpdate.body.isSuccess).toBe(true);
@@ -110,5 +99,50 @@ describe("User API role management", () => {
     const updated = await findUserWithRoles(payload.userName);
     const roleNames = updated.roles.map((r) => r.name.toLowerCase());
     expect(roleNames.sort()).toEqual(["student", "teacher"]);
+  });
+
+  it("teacher cannot list users", async () => {
+    const res = await request(app).get("/api/users").set("Authorization", teacherAuthHeader);
+    expect(res.status).toBe(403);
+  });
+
+  it("student cannot create users", async () => {
+    const payload = buildUserPayload();
+    const res = await createUser(payload, studentAuthHeader);
+    expect(res.status).toBe(403);
+  });
+
+  it("admin cannot create user with admin role", async () => {
+    const payload = buildUserPayload({ roles: ["admin"] });
+    usersToCleanup.push(payload.userName);
+
+    const res = await createUser(payload, adminAuthHeader);
+    expect(res.status).toBe(403);
+  });
+
+  it("admin cannot view another super admin profile", async () => {
+    const payload = buildUserPayload({ roles: ["super admin"] });
+    usersToCleanup.push(payload.userName);
+    await createUser(payload, superAdminAuthHeader);
+    const created = await findUserWithRoles(payload.userName);
+    expect(created).toBeTruthy();
+
+    const res = await request(app)
+      .get(`/api/users/${created.id}`)
+      .set("Authorization", adminAuthHeader);
+    expect(res.status).toBe(403);
+  });
+
+  it("admin cannot delete another super admin", async () => {
+    const payload = buildUserPayload({ roles: ["super admin"] });
+    usersToCleanup.push(payload.userName);
+    await createUser(payload, superAdminAuthHeader);
+    const created = await findUserWithRoles(payload.userName);
+    expect(created).toBeTruthy();
+
+    const res = await request(app)
+      .delete(`/api/users/${created.id}`)
+      .set("Authorization", adminAuthHeader);
+    expect(res.status).toBe(403);
   });
 });

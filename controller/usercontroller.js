@@ -1,6 +1,7 @@
 const userService = require("../service/userService");
 const bcrypt = require("bcryptjs");
 const { bcryptConfig } = require("../appConfig");
+const { parsePagination } = require("../common/pagination");
 const saltRounds = bcryptConfig?.saltRounds || 10;
 
 const normalizeRoleName = (name) =>
@@ -262,8 +263,7 @@ const listAsync = async (req, res, next) => {
       return res.sendCommonValue(403, "Only admin or super admin can list users");
     }
 
-    const page = parseInt(req.query.page, 10) || 1;
-    const pageSize = parseInt(req.query.pageSize, 10) || 10;
+    const { page, pageSize } = parsePagination(req.query);
     const result = await userService.getUserListAsync(page, pageSize);
     const allowedRoles = roleCtx.isSuperAdmin
       ? ["super admin", "admin", "teacher", "student"]

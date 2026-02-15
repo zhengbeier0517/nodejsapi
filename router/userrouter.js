@@ -1,9 +1,10 @@
 var express = require("express");
 var router = express.Router();
 
-const { body, param, query } = require("express-validator");
+const { body, param } = require("express-validator");
 const { commonValidate } = require("../middleware/expressValidator");
 const { authenticate } = require("../middleware/authentication");
+const { paginationValidators } = require("../common/pagination");
 const userController = require("../controller/userController");
 
 /**
@@ -146,14 +147,7 @@ router.post(
 router.get(
   "/",
   authenticate,
-  commonValidate([
-    query("page").optional().bail().isInt({ min: 1 }).withMessage("page must be int"),
-    query("pageSize")
-      .optional()
-      .bail()
-      .isInt({ min: 1 })
-      .withMessage("pageSize must be int"),
-  ]),
+  commonValidate(paginationValidators()),
   userController.listAsync
 );
 
