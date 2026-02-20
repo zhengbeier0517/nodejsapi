@@ -309,11 +309,9 @@ const refresh = async (refreshToken) => {
  * @param {string} type
  */
 const blacklistToken = async (token, type) => {
-  if (!token) return;
   const decoded = jwt.decode(token);
-  // 如果无法解析到 exp 或 jti，直接忽略，不写入黑名单
-  if (!decoded || !decoded.exp || !decoded.jti || !decoded.id) return;
   const ttl = decoded.exp * 1000 - Date.now();
+
   if (ttl > 0) {
     await cacheHelper.setAsync(`auth:${type}:${decoded.id}:${decoded.jti}`, true, ttl);
   }
