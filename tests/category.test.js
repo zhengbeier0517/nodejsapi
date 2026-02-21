@@ -1,28 +1,12 @@
 const request = require("supertest");
-const jwt = require("jsonwebtoken");
 const app = require("../app");
-const { jwtConfig } = require("../appConfig");
-const { sequelize, Category } = require("../models");
-const { sequelize: rawSequelize } = require("../db/sequelizedb");
-
-// helper to sign an admin token using the same settings as authentication middleware
-const adminToken = jwt.sign(
-  { id: 1, roles: ["admin"] },
-  jwtConfig.accessSecret,
-  {
-    audience: jwtConfig.audience,
-    issuer: jwtConfig.issuer,
-    algorithm: jwtConfig.algorithms[0],
-    expiresIn: "1h",
-  }
-);
-
-const authHeader = { Authorization: `Bearer ${adminToken}` };
+const { Category } = require("../models");
+const { adminAuthHeader } = require("./testHelper");
 
 const createCategory = async (payload) => {
   return request(app)
     .post("/api/category")
-    .set(authHeader)
+    .set("Authorization", adminAuthHeader)
     .send(payload);
 };
 
@@ -33,8 +17,6 @@ describe("Category API (auth + admin)", () => {
     if (namesToCleanup.length > 0) {
       await Category.destroy({ where: { name: namesToCleanup } });
     }
-    await rawSequelize.close();
-    await sequelize.close();
   });
 
   it("creates a category and returns in tree", async () => {
@@ -74,39 +56,39 @@ describe("Category API (auth + admin)", () => {
     // update parent
     const resUpdate = await request(app)
       .put(`/api/category/${parentId}`)
-      .set(authHeader)
+      .set("Authorization", adminAuthHeader)
       .send({ description: "updated desc" });
     expect(resUpdate.status).toBe(200);
 
     // toggle active
     const resActive = await request(app)
       .patch(`/api/category/${parentId}/active`)
-      .set(authHeader)
+      .set("Authorization", adminAuthHeader)
       .send({ active: false });
     expect(resActive.status).toBe(200);
 
     // update sort
     const resSort = await request(app)
       .patch(`/api/category/${parentId}/sort`)
-      .set(authHeader)
+      .set("Authorization", adminAuthHeader)
       .send({ sortOrder: 10 });
     expect(resSort.status).toBe(200);
 
     // deleting parent should fail while child exists
     const resDeleteParentFail = await request(app)
       .delete(`/api/category/${parentId}`)
-      .set(authHeader);
+      .set("Authorization", adminAuthHeader);
     expect(resDeleteParentFail.status).toBe(400);
 
     // delete child then parent succeeds
     const resDeleteChild = await request(app)
       .delete(`/api/category/${childId}`)
-      .set(authHeader);
+      .set("Authorization", adminAuthHeader);
     expect(resDeleteChild.status).toBe(200);
 
     const resDeleteParent = await request(app)
       .delete(`/api/category/${parentId}`)
-      .set(authHeader);
+      .set("Authorization", adminAuthHeader);
     expect(resDeleteParent.status).toBe(200);
   });
 });
